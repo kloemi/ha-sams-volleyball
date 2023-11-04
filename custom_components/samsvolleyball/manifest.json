@@ -1,11 +1,12 @@
 {
-  "domain": "sams",
+  "domain": "samsvolleyball",
   "name": "Sams Volleyball Tracker",
   "codeowners": ["@kloemi"],
+  "config_flow": true,
   "documentation": "https://github.com/kloemi/ha-sams-volleyball",
   "integration_type": "device",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/kloemi/ha-sams-volleyball",
-  "loggers": ["sams-volleyball"],
+  "loggers": ["samsvolleyball"],
   "version": "v0.0.0"
 }

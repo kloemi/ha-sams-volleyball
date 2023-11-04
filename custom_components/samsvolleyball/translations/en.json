@@ -11,9 +11,10 @@
         "step": {
             "user": {
                 "data": {
+                    "name": "Sensor name",
                     "host": "Host",
-                    "password": "Password",
-                    "username": "Username"
+                    "region": "Region",
+                    "team": "Team"
                 }
             }
         }

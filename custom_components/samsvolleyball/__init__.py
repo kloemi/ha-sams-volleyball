@@ -1,19 +1,26 @@
 """The sams-volleyball integration."""
 from __future__ import annotations
+import logging
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
+from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
+from homeassistant.components.sensor import PLATFORM_SCHEMA
 
-from .const import DOMAIN
+from .const import (
+    DOMAIN,
+    PLATFORMS,
+    VERSION,
+)
 
-# TODO List the platforms that you want to support.
-# For your initial PR, limit it to 1 platform.
-PLATFORMS: list[Platform] = [Platform.LIGHT]
-
+_LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up sams-volleyball from a config entry."""
+    _LOGGER.info(
+        "Sams Volleyball Tracker version %s is starting!",
+        VERSION,
+    )
 
     hass.data.setdefault(DOMAIN, {})
     # TODO 1. Create API instance
@@ -22,7 +29,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # hass.data[DOMAIN][entry.entry_id] = MyApi(...)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
     return True
 
 

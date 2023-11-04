@@ -1,4 +1,4 @@
-"""Config flow for sams-volleyball integration."""
+"""Config flow for samsvolleyball integration."""
 from __future__ import annotations
 
 import logging
@@ -8,19 +8,28 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
+from homeassistant.const import CONF_NAME
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 
-from .const import DOMAIN
+from .const import (
+    DOMAIN,
+    DEFAULT_OPTIONS,
+    CONF_HOST,
+    CONF_REGION,
+    CONF_TEAM,
+    CONFIG_ENTRY_VERSION,
+)
+
 
 _LOGGER = logging.getLogger(__name__)
 
-# TODO adjust the data schema to the data that you need
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
-        vol.Required("host"): str,
-        vol.Required("username"): str,
-        vol.Required("password"): str,
+        vol.Optional(CONF_NAME, default=DEFAULT_OPTIONS[CONF_NAME]): str,
+        vol.Required(CONF_HOST, default=DEFAULT_OPTIONS[CONF_HOST]): str,
+        vol.Required(CONF_REGION, default=DEFAULT_OPTIONS[CONF_REGION]): str,
+        vol.Required(CONF_TEAM, default=DEFAULT_OPTIONS[CONF_TEAM]): str,
     }
 )
 
@@ -53,9 +62,9 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     #     your_validate_func, data["username"], data["password"]
     # )
 
-    hub = PlaceholderHub(data["host"])
+    hub = PlaceholderHub(data[CONF_HOST])
 
-    if not await hub.authenticate(data["username"], data["password"]):
+    if not await hub.authenticate(data[CONF_REGION], data[CONF_TEAM]):
         raise InvalidAuth
 
     # If you cannot connect:
@@ -63,14 +72,15 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     # If the authentication is wrong:
     # InvalidAuth
 
+    devicename = data[CONF_TEAM] + ' ' + data[CONF_REGION].capitalize()
     # Return info that you want to store in the config entry.
-    return {"title": "Name of the device"}
+    return {"title": devicename}
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for sams-volleyball."""
+    """Handle a config flow for samsvolleyball."""
 
-    VERSION = 1
+    VERSION = CONFIG_ENTRY_VERSION
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
