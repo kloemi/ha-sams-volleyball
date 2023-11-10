@@ -1,6 +1,7 @@
 """The sams-volleyball integration."""
 from __future__ import annotations
 import asyncio
+import aiohttp
 import logging
 import json
 import urllib.parse
@@ -10,6 +11,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
 from homeassistant.components.sensor import PLATFORM_SCHEMA
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
@@ -34,7 +36,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.unique_id = name
     url = urllib.parse.urljoin(entry.data[CONF_HOST], entry.data[CONF_REGION])
 
-    coordinator  = SamsDataCoordinator(hass, entry, name, url)
+    session = async_get_clientsession(hass)
+
+    coordinator  = SamsDataCoordinator(hass, session, name, url)
     domain_data[entry.unique_id] = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -53,14 +57,14 @@ class SamsDataCoordinator(DataUpdateCoordinator):
 
     def __init__(self,
                  hass: HomeAssistant,
-                 entry: ConfigEntry,
+                 session: aiohttp.ClientSession,
                  name,
                  websocket_url
                  ) -> None:
         """ init websocket instance"""
-        self.name =  name
-        self.config = entry
         self.hass = hass
+        self.session = session
+        self.name =  name
         self.websocket_url = websocket_url
         self.ws = None
         self._connected = False
@@ -70,6 +74,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
 
 
     async def _async_update_data(self):
+        _LOGGER.debug("Async update")
         if not self.ws or False == self._connected:
             _LOGGER.debug("Connect to %s",self.websocket_url)
             await self.async_connect()
@@ -86,20 +91,20 @@ class SamsDataCoordinator(DataUpdateCoordinator):
     async def _on_open(self):
         _LOGGER.debug("Connection opened")
         self._connected = True
-        # ws.send(json.dumps({"key": "value"}))
 
     async def run_websocket(self):
         try:
-            async with websockets.connect(self.websocket_url) as websocket:
-                self.ws = websocket
+            async with self.session.ws_connect(self.websocket_url) as ws:
                 await self._on_open()
-                async for message in websocket:
-                    await self._on_message(message)
-        except websockets.ConnectionClosed as exc:
-            _LOGGER.info("Connection closed with code %d: %s", exc.code, exc.reason)
-            await self._on_close()
+                async for msg in ws:
+                    await self._on_message(msg.data)
+        except aiohttp.ClientConnectionError:
+            _LOGGER.info("Connection closed")
         finally:
             await self._on_close()
 
-    async def async_connect(self) -> None:
-        self._ws_task = asyncio.create_task(self.run_websocket())
+    async def async_connect(self):
+        try:
+            await self.run_websocket()
+        finally:
+            await self.session.close()
