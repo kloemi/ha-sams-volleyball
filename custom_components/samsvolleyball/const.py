@@ -18,4 +18,7 @@ DEFAULT_OPTIONS = {
     CONF_TEAM: "FT 1844 Freiburg 4",
 }
 
+DEFAULT_ICON = "mdi:volleyball"
+VOLLEYBALL = "volleyball"
+
 VERSION = "v0.0.0"
