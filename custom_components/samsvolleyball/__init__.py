@@ -69,6 +69,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
         self.ws = None
         self._connected = False
         self._ws_task = None
+        self.loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
 
         super().__init__(hass, _LOGGER, name=self.name)
 
@@ -77,12 +78,21 @@ class SamsDataCoordinator(DataUpdateCoordinator):
         _LOGGER.debug("Async update")
         if not self.ws or False == self._connected:
             _LOGGER.debug("Connect to %s",self.websocket_url)
-            await self.async_connect()
+            await self.connect()
 
-    async def _on_message(self, message: str):
-        data = json.loads(message)
+    async def _on_message(self, message: aiohttp.WSMessage):
+        data = json.loads(message.data)
         _LOGGER.debug("Received data: %s ", message[1:200])
         self.async_set_updated_data(data)
+
+    async def _process_messages(self):
+        try:
+            async for msg in self.ws:
+                await self._on_message(msg)
+        except Exception as exc:
+            _LOGGER.error("Error processing messages: %s", exc)
+        finally:
+            await self._on_close()
 
     async def _on_close(self):
         _LOGGER.debug("Connection closed")
@@ -92,19 +102,20 @@ class SamsDataCoordinator(DataUpdateCoordinator):
         _LOGGER.debug("Connection opened")
         self._connected = True
 
-    async def run_websocket(self):
+    async def connect(self):
         try:
-            async with self.session.ws_connect(self.websocket_url) as ws:
-                await self._on_open()
-                async for msg in ws:
-                    await self._on_message(msg.data)
-        except aiohttp.ClientConnectionError:
-            _LOGGER.info("Connection closed")
-        finally:
-            await self._on_close()
+            self.ws = await self.session.ws_connect(self.websocket_url, autoclose=False)
+        except Exception as exc:
+            print(exc)
+        self._ws_task = self.loop.create_task(self._process_messages())
+        self._ws_task.add_done_callback(self._on_close)
+        await self._on_open()
 
-    async def async_connect(self):
-        try:
-            await self.run_websocket()
-        finally:
-            await self.session.close()
+    async def disconnect(self):
+        """Close web socket connection"""
+        if self._ws_task is not None:
+            self._ws_task.cancel()
+            self._ws_task = None
+        if self.ws is not None:
+            await self.ws.close()
+            self.ws = None
