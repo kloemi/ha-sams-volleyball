@@ -2,14 +2,18 @@
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import ATTR_ATTRIBUTION
 from homeassistant.core import HomeAssistant, CALLBACK_TYPE, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
+from typing import Any
 
 from . import SamsDataCoordinator
 from .const import (
-    CONF_TEAM,
+    ATTRIBUTION,
+    CONF_TEAM_NAME,
+    CONF_TEAM_UUID,
     DOMAIN,
     DEFAULT_ICON,
     VOLLEYBALL,
@@ -42,72 +46,12 @@ class SamsTeamTracker(CoordinatorEntity):
         super().__init__(coordinator)
 
         self._coordinator = coordinator
-        self._name = entry.data[CONF_TEAM]
+        self._name = entry.data[CONF_TEAM_NAME]
+        self._team_uuid = ""
         self._config = entry
         self._state = "PRE"
 
         self._sport = VOLLEYBALL
-        self._league = None
-        self._league_logo = None
-        self._team_abbr = None
-        self._opponent_abbr = None
-
-        self._event_name = None
-        self._date = None
-        self._kickoff_in = None
-        self._venue = None
-        self._location = None
-        self._tv_network = None
-        self._odds = None
-        self._overunder = None
-
-        self._team_name = None
-        self._team_id = None
-        self._team_record = None
-        self._team_rank = None
-        self._team_homeaway = None
-        self._team_logo = None
-        self._team_colors = None
-        self._team_score = None
-        self._team_win_probability = None
-        self._team_winner = None
-        self._team_timeouts = None
-
-        self._opponent_name = None
-        self._opponent_id = None
-        self._opponent_record = None
-        self._opponent_rank = None
-        self._opponent_homeaway = None
-        self._opponent_logo = None
-        self._opponent_colors = None
-        self._opponent_score = None
-        self._opponent_win_probability = None
-        self._opponent_winner = None
-        self._opponent_timeouts = None
-
-        self._quarter = None
-        self._clock = None
-        self._possession = None
-        self._last_play = None
-        self._down_distance_text = None
-
-        self._outs = None
-        self._balls = None
-        self._strikes = None
-        self._on_first = None
-        self._on_second = None
-        self._on_third = None
-
-        self._team_shots_on_target = None
-        self._team_total_shots = None
-        self._opponent_shots_on_target = None
-        self._opponent_total_shots = None
-
-        self._team_sets_won = None
-        self._opponent_sets_won = None
-
-        self._last_update = None
-        self._api_message = None
 
     @property
     def unique_id(self) -> str:
@@ -124,6 +68,19 @@ class SamsTeamTracker(CoordinatorEntity):
     @property
     def state(self) -> str:
         return self._state
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return the state message."""
+        attrs = {}
+
+        if self.coordinator.data is None:
+            return attrs
+
+        attrs[ATTR_ATTRIBUTION] = ATTRIBUTION
+        attrs["sport"] = VOLLEYBALL
+
+        return attrs
 
     @property
     def available(self) -> bool:

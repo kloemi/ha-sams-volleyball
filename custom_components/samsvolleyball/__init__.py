@@ -6,7 +6,7 @@ import json
 import urllib.parse
 
 from aiohttp import ClientSession, WSMessage, WSMsgType
-
+from datetime import timedelta
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
@@ -42,13 +42,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
-
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         coordinator = hass.data[DOMAIN].pop(entry.unique_id)
         await coordinator.disconnect()
-
     return unload_ok
 
 class SamsDataCoordinator(DataUpdateCoordinator):
@@ -72,9 +70,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
 
         super().__init__(hass, _LOGGER, name=self.name)
 
-
     async def _async_update_data(self):
-        _LOGGER.debug("Async update")
         if not self.ws or not self._connected:
             _LOGGER.debug("Connect to %s",self.websocket_url)
             await self.connect()
@@ -99,8 +95,22 @@ class SamsDataCoordinator(DataUpdateCoordinator):
         try:
             async for msg in self.ws:
                 await self._on_message(msg)
+        except RuntimeError:
+            _LOGGER.info("Sams Websocket runtime error")
+        except ConnectionResetError:
+            _LOGGER.info("Sams Websocket Connection Reset")
+        except Exception as exc:
+            _LOGGER.info("Sams Websocket Connection Reset %s",exc)
         finally:
             await self._on_close()
+
+    async def data_received(self):
+        try:
+            ws = await self.session.ws_connect(self.websocket_url, autoclose=False)
+            data = await self.ws.receive_json()
+        finally:
+            await ws.close()
+        return data
 
     async def connect(self):
         try:
@@ -108,7 +118,6 @@ class SamsDataCoordinator(DataUpdateCoordinator):
         except Exception as exc:
             print(exc)
         self._ws_task = self.loop.create_task(self._process_messages())
-        #self._ws_task.add_done_callback(self._on_close)
         await self._on_open()
 
     async def disconnect(self):

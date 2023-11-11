@@ -22,10 +22,10 @@ from .const import (
     DEFAULT_OPTIONS,
     CONF_HOST,
     CONF_REGION,
-    CONF_TEAM,
+    CONF_TEAM_NAME,
     CONFIG_ENTRY_VERSION,
+    CONF_REGION_LIST,
 )
-
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,8 +33,13 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Optional(CONF_NAME, default=DEFAULT_OPTIONS[CONF_NAME]): str,
         vol.Required(CONF_HOST, default=DEFAULT_OPTIONS[CONF_HOST]): str,
-        vol.Required(CONF_REGION, default=DEFAULT_OPTIONS[CONF_REGION]): str,
-        vol.Required(CONF_TEAM, default=DEFAULT_OPTIONS[CONF_TEAM]): str,
+        vol.Required(CONF_REGION, default=DEFAULT_OPTIONS[CONF_REGION]): vol.In(CONF_REGION_LIST),
+    }
+)
+
+STEP_TEAM_DATA_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_TEAM_NAME, default=DEFAULT_OPTIONS[CONF_TEAM_NAME]): str,
     }
 )
 
@@ -47,12 +52,21 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     url = urllib.parse.urljoin(data[CONF_HOST], data[CONF_REGION])
     session = async_get_clientsession(hass)
     coordinator = SamsDataCoordinator(hass, session, "ConfigValidate", url)
-    await coordinator.connect()
 
-    devicename = data[CONF_TEAM] + ' ' + data[CONF_REGION].capitalize()
+    try:
+        data = await coordinator.data_received()
+    except Exception as exc:
+        raise CannotConnect from exc
+    if not data:
+        raise InvalidData
+
+    #leagues = get_leaguelist(coordinator.data)
+    #if not data:
+    #   raise InvalidData
+
+    devicename = data[CONF_TEAM_NAME] + ' ' + data[CONF_REGION].capitalize()
     # Return info that you want to store in the config entry.
     return {"title": devicename}
-
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for samsvolleyball."""
@@ -82,7 +96,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
         )
-
 
 class CannotConnect(HomeAssistantError):
     """Error to indicate we cannot connect."""
