@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_NAME
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 import urllib.parse
 
@@ -44,9 +45,9 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     """
 
     url = urllib.parse.urljoin(data[CONF_HOST], data[CONF_REGION])
-    #coordinator = SamsDataCoordinator(hass, "ConfigValidate", url)
-
-    #await coordinator.async_connect()
+    session = async_get_clientsession(hass)
+    coordinator = SamsDataCoordinator(hass, session, "ConfigValidate", url)
+    await coordinator.connect()
 
     devicename = data[CONF_TEAM] + ' ' + data[CONF_REGION].capitalize()
     # Return info that you want to store in the config entry.
