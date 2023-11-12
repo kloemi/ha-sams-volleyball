@@ -5,15 +5,25 @@
         },
         "error": {
             "cannot_connect": "Failed to connect",
-            "invalid_auth": "Invalid authentication",
-            "unknown": "Unexpected error"
+            "invalid_data": "Invalid data received",
+            "unknown": "Unexpected error",
+            "no_teams": "No teams found in selected league"
         },
         "step": {
             "user": {
                 "data": {
                     "name": "Sensor name",
                     "host": "Host",
-                    "region": "Region",
+                    "region": "Region"
+                }
+            },
+            "league": {
+                "data": {
+                    "league": "League"
+                }
+            },
+            "team": {
+                "data": {
                     "team": "Team"
                 }
             }

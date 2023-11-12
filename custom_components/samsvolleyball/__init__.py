@@ -16,6 +16,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .const import (
     CONF_HOST,
+    CONF_TEAM_NAME,
     CONF_REGION,
     DOMAIN,
     PLATFORMS,
@@ -32,7 +33,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     domain_data = hass.data.setdefault(DOMAIN, {})
-    name = entry.data[CONF_NAME] + " " + entry.data[CONF_REGION].capitalize()
+    name = entry.data[CONF_TEAM_NAME] + " " + entry.data[CONF_REGION].capitalize()
     entry.unique_id = name
     url = urllib.parse.urljoin(entry.data[CONF_HOST], entry.data[CONF_REGION])
     session = async_get_clientsession(hass)
@@ -107,7 +108,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
     async def data_received(self):
         try:
             ws = await self.session.ws_connect(self.websocket_url, autoclose=False)
-            data = await self.ws.receive_json()
+            data = await ws.receive_json()
         finally:
             await ws.close()
         return data

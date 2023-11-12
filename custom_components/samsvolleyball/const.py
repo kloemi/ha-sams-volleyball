@@ -7,6 +7,7 @@ PLATFORMS = [Platform.SENSOR]
 
 CONF_HOST = "host"
 CONF_REGION = "region"
+CONF_LEAGUE = "league"
 CONF_TEAM_NAME = "team"
 CONF_TEAM_UUID = "team_id"
 
@@ -32,3 +33,6 @@ VOLLEYBALL = "volleyball"
 VERSION = "v0.0.0"
 
 ATTRIBUTION = "Data provided by sams"
+
+TICKER_TYPE = "FETCH_ASSOCIATION_TICKER_RESPONSE"
+MATCH_TYPE = "MATCH_UPDATE"

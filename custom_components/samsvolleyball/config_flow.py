@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import json
 from typing import Any
 
 import voluptuous as vol
@@ -16,15 +17,17 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import urllib.parse
 
 from . import SamsDataCoordinator
+from .utils import get_leaguelist, get_teamlist
 
 from .const import (
     DOMAIN,
     DEFAULT_OPTIONS,
     CONF_HOST,
+    CONF_LEAGUE,
     CONF_REGION,
+    CONF_REGION_LIST,
     CONF_TEAM_NAME,
     CONFIG_ENTRY_VERSION,
-    CONF_REGION_LIST,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -60,18 +63,22 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     if not data:
         raise InvalidData
 
-    #leagues = get_leaguelist(coordinator.data)
-    #if not data:
-    #   raise InvalidData
+    leagues = get_leaguelist(data)
+    if 0 == len(leagues):
+       raise InvalidData
 
-    devicename = data[CONF_TEAM_NAME] + ' ' + data[CONF_REGION].capitalize()
     # Return info that you want to store in the config entry.
-    return {"title": devicename}
+    return data, leagues
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for samsvolleyball."""
 
     VERSION = CONFIG_ENTRY_VERSION
+
+    _cfg_data: Optional[Dict[str, Any]]
+    _data = None
+    _leagues: dict[str, str] = None
+    _teams: dict[str, str] = None
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -80,7 +87,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             try:
-                info = await validate_input(self.hass, user_input)
+                self._data, self._leagues = await validate_input(self.hass, user_input)
+                self._cfg_data = user_input
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except InvalidData:
@@ -91,11 +99,53 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
-                return self.async_create_entry(title=info["title"], data=user_input)
+                return await self.async_step_league()
 
         return self.async_show_form(
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
         )
+
+    async def async_step_league(
+            self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            league_id = self._leagues[user_input[CONF_LEAGUE]]
+            self._teams = get_teamlist(self._data, league_id)
+            if 0 == len(self._teams):
+                errors["base"] = "no_teams"
+            else:
+                self._cfg_data[CONF_LEAGUE] = user_input[CONF_LEAGUE]
+                return await self.async_step_team()
+
+        step_league_schema = vol.Schema(
+            {
+                vol.Required(CONF_LEAGUE): vol.In(list(self._leagues.keys())),
+            }
+        )
+        return self.async_show_form(
+            step_id="league", data_schema=step_league_schema, errors=errors
+        )
+
+    async def async_step_team(
+            self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+
+        if user_input is not None:
+            self._cfg_data[CONF_TEAM_NAME] = user_input[CONF_TEAM_NAME]
+            devicename = user_input[CONF_TEAM_NAME] + ' ' + self._cfg_data[CONF_REGION].capitalize()
+            return self.async_create_entry(title=devicename, data=self._cfg_data)
+
+        step_team_schema = vol.Schema(
+            {
+                vol.Required(CONF_TEAM_NAME): vol.In(list(self._teams.keys())),
+            }
+        )
+        return self.async_show_form(
+            step_id="team", data_schema=step_team_schema
+        )
+
+
 
 class CannotConnect(HomeAssistantError):
     """Error to indicate we cannot connect."""
