@@ -1,4 +1,4 @@
-# Sams Volleyball
+# Sams Volleyball Tracker
 
 ### Custom component to access data from sams ticker in Home Assistant
 
