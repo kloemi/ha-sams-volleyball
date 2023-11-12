@@ -34,3 +34,12 @@ def get_teamlist(data: json, league_id) -> dict[str,str]:
         _LOGGER.debug(f"get_teamlist - cannot extract teams")
         teams = {}
     return teams
+
+def get_league_data(data, league_id, field):
+    try:
+        if data["type"] == TICKER_TYPE:
+            allseries = data["payload"]["matchSeries"]
+            series = allseries.get(league_id)
+            return series[field]
+    except KeyError as e:
+        _LOGGER.debug(f"get_league_data - cannot extract field, %s", field)

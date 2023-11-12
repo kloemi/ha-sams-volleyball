@@ -6,11 +6,8 @@ import json
 import urllib.parse
 
 from aiohttp import ClientSession, WSMessage, WSMsgType
-from datetime import timedelta
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
-from homeassistant.components.sensor import PLATFORM_SCHEMA
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -33,12 +30,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     domain_data = hass.data.setdefault(DOMAIN, {})
-    name = entry.data[CONF_TEAM_NAME] + " " + entry.data[CONF_REGION].capitalize()
+    name = f"{entry.data[CONF_TEAM_NAME]} {entry.data[CONF_REGION].capitalize()}"
     entry.unique_id = name
     url = urllib.parse.urljoin(entry.data[CONF_HOST], entry.data[CONF_REGION])
-    session = async_get_clientsession(hass)
-    coordinator  = SamsDataCoordinator(hass, session, name, url)
-    domain_data[entry.unique_id] = coordinator
+
+    if entry.data[CONF_REGION] in domain_data:
+        # we already have a coordinator for that region
+        coordinator = domain_data[entry.data[CONF_REGION]]
+    else:
+        #create new coordinator for the sams region
+        session = async_get_clientsession(hass)
+        coordinator  = SamsDataCoordinator(hass, session, name, url)
+        domain_data[entry.data[CONF_REGION]] = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
@@ -46,12 +49,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        coordinator = hass.data[DOMAIN].pop(entry.unique_id)
-        await coordinator.disconnect()
+        coordinator = hass.data[DOMAIN][entry.data[CONF_REGION]]
+        if not coordinator.hasListener():
+            coordinator = hass.data[DOMAIN].pop(entry.data[CONF_REGION])
+            await coordinator.disconnect()
+            _LOGGER.info(
+                "Sams Volleyball Tracker removed coordinator for region %s ",
+                entry.data[CONF_REGION],
+            )
     return unload_ok
 
 class SamsDataCoordinator(DataUpdateCoordinator):
-    """Class to manage fetching sams ticker data."""
+    """Class to manage fetching sams ticker data. It is intantiated once per used region/websocket."""
 
     def __init__(self,
                  hass: HomeAssistant,
@@ -129,3 +138,6 @@ class SamsDataCoordinator(DataUpdateCoordinator):
         if self.ws is not None:
             await self.ws.close()
             self.ws = None
+
+    def hasListener(self) -> bool:
+        return len(self._listeners) > 0

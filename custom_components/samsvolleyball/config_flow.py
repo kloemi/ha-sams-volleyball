@@ -17,16 +17,19 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import urllib.parse
 
 from . import SamsDataCoordinator
-from .utils import get_leaguelist, get_teamlist
+from .utils import get_leaguelist, get_teamlist, get_league_data
 
 from .const import (
     DOMAIN,
     DEFAULT_OPTIONS,
     CONF_HOST,
     CONF_LEAGUE,
+    CONF_LEAGUE_GENDER,
+    CONF_LEAGUE_NAME,
     CONF_REGION,
     CONF_REGION_LIST,
     CONF_TEAM_NAME,
+    CONF_TEAM_UUID,
     CONFIG_ENTRY_VERSION,
 )
 
@@ -37,12 +40,6 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         vol.Optional(CONF_NAME, default=DEFAULT_OPTIONS[CONF_NAME]): str,
         vol.Required(CONF_HOST, default=DEFAULT_OPTIONS[CONF_HOST]): str,
         vol.Required(CONF_REGION, default=DEFAULT_OPTIONS[CONF_REGION]): vol.In(CONF_REGION_LIST),
-    }
-)
-
-STEP_TEAM_DATA_SCHEMA = vol.Schema(
-    {
-        vol.Required(CONF_TEAM_NAME, default=DEFAULT_OPTIONS[CONF_TEAM_NAME]): str,
     }
 )
 
@@ -75,10 +72,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     VERSION = CONFIG_ENTRY_VERSION
 
-    _cfg_data: Optional[Dict[str, Any]]
-    _data = None
-    _leagues: dict[str, str] = None
-    _teams: dict[str, str] = None
+    cfg_data: Optional[Dict[str, Any]]
+    data = None
+    leagues: dict[str, str] = None
+    teams: dict[str, str] = None
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -87,8 +84,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             try:
-                self._data, self._leagues = await validate_input(self.hass, user_input)
-                self._cfg_data = user_input
+                self.data, self.leagues = await validate_input(self.hass, user_input)
+                self.cfg_data = user_input
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except InvalidData:
@@ -110,17 +107,19 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> FlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
-            league_id = self._leagues[user_input[CONF_LEAGUE]]
-            self._teams = get_teamlist(self._data, league_id)
-            if 0 == len(self._teams):
+            league_id = self.leagues[user_input[CONF_LEAGUE]]
+            self.teams = get_teamlist(self.data, league_id)
+            self.cfg_data[CONF_LEAGUE_GENDER] =  get_league_data(self.data, league_id, CONF_LEAGUE_GENDER)
+            self.cfg_data[CONF_LEAGUE_NAME] =  get_league_data(self.data, league_id, "name")
+            if 0 == len(self.teams):
                 errors["base"] = "no_teams"
             else:
-                self._cfg_data[CONF_LEAGUE] = user_input[CONF_LEAGUE]
+                self.cfg_data[CONF_LEAGUE] = user_input[CONF_LEAGUE]
                 return await self.async_step_team()
 
         step_league_schema = vol.Schema(
             {
-                vol.Required(CONF_LEAGUE): vol.In(list(self._leagues.keys())),
+                vol.Required(CONF_LEAGUE): vol.In(list(self.leagues.keys())),
             }
         )
         return self.async_show_form(
@@ -132,20 +131,21 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> FlowResult:
 
         if user_input is not None:
-            self._cfg_data[CONF_TEAM_NAME] = user_input[CONF_TEAM_NAME]
-            devicename = user_input[CONF_TEAM_NAME] + ' ' + self._cfg_data[CONF_REGION].capitalize()
-            return self.async_create_entry(title=devicename, data=self._cfg_data)
+            self.cfg_data[CONF_TEAM_NAME] = user_input[CONF_TEAM_NAME]
+            team_id = self.teams[user_input[CONF_TEAM_NAME]]
+            self.cfg_data[CONF_TEAM_UUID] = team_id
+
+            devicename = f"{user_input[CONF_TEAM_NAME]} ({self.cfg_data[CONF_LEAGUE_NAME]})"
+            return self.async_create_entry(title=devicename, data=self.cfg_data)
 
         step_team_schema = vol.Schema(
             {
-                vol.Required(CONF_TEAM_NAME): vol.In(list(self._teams.keys())),
+                vol.Required(CONF_TEAM_NAME): vol.In(list(self.teams.keys())),
             }
         )
         return self.async_show_form(
             step_id="team", data_schema=step_team_schema
         )
-
-
 
 class CannotConnect(HomeAssistantError):
     """Error to indicate we cannot connect."""

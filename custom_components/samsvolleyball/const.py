@@ -8,6 +8,9 @@ PLATFORMS = [Platform.SENSOR]
 CONF_HOST = "host"
 CONF_REGION = "region"
 CONF_LEAGUE = "league"
+CONF_LEAGUE_GENDER = "gender"
+CONF_LEAGUE_NAME = "league_name"
+
 CONF_TEAM_NAME = "team"
 CONF_TEAM_UUID = "team_id"
 
@@ -24,7 +27,6 @@ CONF_REGION_LIST = [
     "baden",
     "dvv",
     "vbl",
-    "unknonwn",
 ]
 
 DEFAULT_ICON = "mdi:volleyball"

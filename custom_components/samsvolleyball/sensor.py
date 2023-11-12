@@ -12,6 +12,7 @@ from typing import Any
 from . import SamsDataCoordinator
 from .const import (
     ATTRIBUTION,
+    CONF_REGION,
     CONF_TEAM_NAME,
     CONF_TEAM_UUID,
     DOMAIN,
@@ -25,7 +26,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the sams volleyball sensor platform."""
-    coordinator  = hass.data[DOMAIN][entry.unique_id]
+    coordinator  = hass.data[DOMAIN][entry.data[CONF_REGION]]
 
     # Create entities list.
     entities = [
@@ -34,6 +35,10 @@ async def async_setup_entry(
 
     # Add sensor entities.
     async_add_entities(entities, True)
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+
+    return True
 
 class SamsTeamTracker(CoordinatorEntity):
     """Representation of a Sensor to provide team tracker compatible data."""
@@ -47,11 +52,9 @@ class SamsTeamTracker(CoordinatorEntity):
 
         self._coordinator = coordinator
         self._name = entry.data[CONF_TEAM_NAME]
-        self._team_uuid = ""
+        self._team_uuid = entry.data[CONF_TEAM_UUID]
         self._config = entry
         self._state = "PRE"
-
-        self._sport = VOLLEYBALL
 
     @property
     def unique_id(self) -> str:
