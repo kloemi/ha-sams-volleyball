@@ -28,7 +28,7 @@ CONF_REGION_LIST = [
     "bvv",
     "dvv",
     "flvb",
-    "hvbh",
+    "hvbv",
     "hvv",
     "nwvv",
     "shvv",

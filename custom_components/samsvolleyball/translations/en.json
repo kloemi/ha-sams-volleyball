@@ -15,7 +15,7 @@
                     "name": "Sensor name",
                     "host": "Host",
                     "region": "Association"
-                },                
+                }
             },
             "league": {
                 "data": {
@@ -32,7 +32,7 @@
     "selector": {
         "region": {
             "options": {
-                "baden": "Nordbaden & Südbaden",                    
+                "baden": "Nordbaden & Südbaden",
                 "bvv": "Brandenburg",
                 "dvv": "DVV - Dritte Liga und RL Nord",
                 "flvb": "Luxemburg",
