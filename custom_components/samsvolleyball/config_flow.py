@@ -38,7 +38,7 @@ _LOGGER = logging.getLogger(__name__)
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
-        vol.Optional(CONF_NAME, default=DEFAULT_OPTIONS[CONF_NAME]): str,
+        #vol.Optional(CONF_NAME, default=DEFAULT_OPTIONS[CONF_NAME]): str,
         vol.Required(CONF_HOST, default=DEFAULT_OPTIONS[CONF_HOST]): str,
         vol.Required(CONF_REGION, default=DEFAULT_OPTIONS[CONF_REGION]): selector.SelectSelector(
             selector.SelectSelectorConfig(

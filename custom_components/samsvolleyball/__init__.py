@@ -13,7 +13,6 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .const import (
     CONF_HOST,
-    CONF_TEAM_NAME,
     CONF_REGION,
     DOMAIN,
     PLATFORMS,
@@ -30,7 +29,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     domain_data = hass.data.setdefault(DOMAIN, {})
-    name = f"{entry.data[CONF_TEAM_NAME]} {entry.data[CONF_REGION].capitalize()}"
+    name = f"Sams Tracker {entry.data[CONF_REGION].capitalize()}"
     entry.unique_id = name
     url = urllib.parse.urljoin(entry.data[CONF_HOST], entry.data[CONF_REGION])
 
@@ -107,12 +106,12 @@ class SamsDataCoordinator(DataUpdateCoordinator):
                 await self._on_message(msg)
         except RuntimeError:
             _LOGGER.info("Sams Websocket runtime error")
+            await self._on_close()
         except ConnectionResetError:
             _LOGGER.info("Sams Websocket Connection Reset")
-        except Exception as exc:
-            _LOGGER.info("Sams Websocket Connection Reset %s",exc)
-        finally:
             await self._on_close()
+        except Exception as exc:
+            _LOGGER.warning("Error during processing new message: ",exc)
 
     async def data_received(self):
         try:

@@ -1,5 +1,6 @@
 """Constants for the samsvolleyball integration."""
 from homeassistant.const import Platform
+from homeassistant.const import CONF_NAME
 
 # Misc
 DOMAIN = "samsvolleyball"
@@ -17,10 +18,9 @@ CONF_TEAM_UUID = "team_id"
 CONFIG_ENTRY_VERSION = 1
 
 DEFAULT_OPTIONS = {
-    "name": "Volleyball Tracker",
+    CONF_NAME: "Volleyball Tracker",
     CONF_HOST: "wss://backend.sams-ticker.de",
     CONF_REGION: "baden",
-    CONF_TEAM_NAME: "FT 1844 Freiburg 4",
 }
 
 CONF_REGION_LIST = [
@@ -49,5 +49,7 @@ VERSION = "v0.0.0"
 
 ATTRIBUTION = "Data provided by sams-ticker"
 
-TICKER_TYPE = "FETCH_ASSOCIATION_TICKER_RESPONSE"
-MATCH_TYPE = "MATCH_UPDATE"
+STATES_IN = "IN"
+STATES_NOT_FOUND = "NOT_FOUND"
+STATES_PRE = "PRE"
+STATES_POST = "POST"
