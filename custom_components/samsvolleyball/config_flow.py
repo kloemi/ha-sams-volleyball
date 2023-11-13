@@ -39,7 +39,11 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Optional(CONF_NAME, default=DEFAULT_OPTIONS[CONF_NAME]): str,
         vol.Required(CONF_HOST, default=DEFAULT_OPTIONS[CONF_HOST]): str,
-        vol.Required(CONF_REGION, default=DEFAULT_OPTIONS[CONF_REGION]): vol.In(CONF_REGION_LIST),
+        vol.Required(CONF_REGION, default=DEFAULT_OPTIONS[CONF_REGION]): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=CONF_REGION_LIST, translation_key=CONF_REGION
+            ),
+        ),
     }
 )
 
