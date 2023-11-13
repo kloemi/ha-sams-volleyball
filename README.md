@@ -6,7 +6,7 @@
 ![Version](https://img.shields.io/github/v/release/kloemi/ha-sams-volleyball)
 [![Downloads](https://img.shields.io/github/downloads/kloemi/ha-sams-volleyball/total)](https://tooomm.github.io/github-release-stats/?username=kloemi&repository=ha-sams-volleyball)
 
-This integration provides real-time scores for volleyball teams that are provided by [sams](http://www.sams-server.de/).
+This integration provides real-time scores for volleyball teams that are provided by [sams](http://www.sams-server.de/) ticker.
 
 The initial version of that integration provides an enitity compatible to the great work of [ha-teamtracker](https://github.com/vasqued2/ha-teamtracker) and can be used with the [ha-teamtracker-card](https://github.com/vasqued2/ha-teamtracker-card) to display the game information in the Home Assistant dashboard.
 
