@@ -25,8 +25,21 @@ DEFAULT_OPTIONS = {
 
 CONF_REGION_LIST = [
     "baden",
+    "bvv",
     "dvv",
+    "flvb",
+    "hvbh",
+    "hvv",
+    "nwvv",
+    "shvv",
+    "ssvb",
+    "svv",
+    "tvv",
     "vbl",
+    "vmv",
+    "vlw",
+    "vvb",
+    "vvrp",
 ]
 
 DEFAULT_ICON = "mdi:volleyball"
@@ -34,7 +47,7 @@ VOLLEYBALL = "volleyball"
 
 VERSION = "v0.0.0"
 
-ATTRIBUTION = "Data provided by sams"
+ATTRIBUTION = "Data provided by sams-ticker"
 
 TICKER_TYPE = "FETCH_ASSOCIATION_TICKER_RESPONSE"
 MATCH_TYPE = "MATCH_UPDATE"
