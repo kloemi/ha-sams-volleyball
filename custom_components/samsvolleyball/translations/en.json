@@ -14,7 +14,23 @@
                 "data": {
                     "name": "Sensor name",
                     "host": "Host",
-                    "region": "Region"
+                    "region": "Association",
+                    "baden": "Nordbaden & Südbaden",
+                    "bvv": "Brandenburg",
+                    "dvv": "DVV - Dritte Liga und RL Nord",
+                    "flvb": "Luxemburg",
+                    "hvbv": "Hamburg",
+                    "hvv": "Hessen",
+                    "nwvv": "Nordwestdeutscher Volleyball-Verband",
+                    "shvv": "Schleswig-Holstein",
+                    "ssvb": "Sachsen",
+                    "svv": "Saarland",
+                    "tvv": "Thüringen",
+                    "vbl": "VBL - 1./2. Bundesliga",
+                    "vmv": "Mecklenburg-Vorpommern",
+                    "vlw": "Württemberg",
+                    "vvb": "Berlin",
+                    "vvrp": "Rheinland-Pfalz"
                 }
             },
             "league": {
