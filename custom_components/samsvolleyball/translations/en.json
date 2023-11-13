@@ -14,7 +14,7 @@
                 "data": {
                     "name": "Sensor name",
                     "host": "Host",
-                    "region": "Association",
+                    "region": "Association"
                 },                
             },
             "league": {
