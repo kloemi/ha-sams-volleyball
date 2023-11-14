@@ -2,18 +2,15 @@ import json
 import logging
 import arrow
 
-from homeassistant.const import ATTR_ATTRIBUTION
 from homeassistant.util import dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
 
 from .const import (
-    ATTRIBUTION,
     STATES_IN,
     STATES_NOT_FOUND,
     STATES_PRE,
     STATES_POST,
-    VOLLEYBALL,
 )
 
 PAYLOAD = "payload"
@@ -148,8 +145,6 @@ def state_from_match(data: json , match: json):
     return state
 
 def fill_attributes(attrs, data, match, team, lang):
-    attrs[ATTR_ATTRIBUTION] = ATTRIBUTION
-    attrs["sport"] = VOLLEYBALL
     try:
         match_id = match[ID]
         match_state = get_match_state(data, match_id)
@@ -175,7 +170,6 @@ def fill_attributes(attrs, data, match, team, lang):
                 attrs["opponent_winner"] = None
 
         attrs["league"] = league[NAME]
-        attrs["league_logo"] = None #ToDo: needed from region out of config
 
         attrs["event_name"] = None
         date = dt_util.as_local(dt_util.utc_from_timestamp(float(match["date"]) / 1000))
@@ -205,6 +199,14 @@ def fill_attributes(attrs, data, match, team, lang):
         attrs["quarter"] = None
         if state == STATES_POST:
             attrs["clock"] = dt_util.as_local(dt_util.utc_from_timestamp(float(match["date"]) / 1000)).time().strftime("%H:%M")
+            if attrs["team_score"] > attrs["opponent_score"]:
+                attrs["team_winner"] = True
+                attrs["opponent_winner"] = False
+            else:
+                attrs["team_winner"] = False
+                attrs["opponent_winner"] = True
+
+
         else: attrs["clock"] = ""
 
         attrs["team_sets_won"] = None

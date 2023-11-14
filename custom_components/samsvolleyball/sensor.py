@@ -7,6 +7,7 @@ from datetime import timedelta
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, CALLBACK_TYPE, callback
+from homeassistant.const import ATTR_ATTRIBUTION
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -26,6 +27,7 @@ from .utils import (
 )
 
 from .const import (
+    ATTRIBUTION,
     CONF_REGION,
     CONF_TEAM_NAME,
     CONF_TEAM_UUID,
@@ -34,6 +36,7 @@ from .const import (
     STATES_NOT_FOUND,
     STATES_PRE,
     TIMEOUT_PERIOD_CHECK,
+    VOLLEYBALL,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -135,6 +138,10 @@ class SamsTeamTracker(CoordinatorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the state message."""
+
+        self._attr[ATTR_ATTRIBUTION] = ATTRIBUTION
+        self._attr["sport"] = VOLLEYBALL
+        self._attr["league_logo"] = None #ToDo: needed from region out of config
 
         if self.coordinator.data is None:
             return self._attr
