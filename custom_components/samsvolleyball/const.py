@@ -42,6 +42,9 @@ CONF_REGION_LIST = [
     "vvrp",
 ]
 
+TIMEOUT_PERIOD_CHECK = 5 # sec
+NO_GAME_TIMEOUT = 12 * 60 # 12 min.
+
 DEFAULT_ICON = "mdi:volleyball"
 VOLLEYBALL = "volleyball"
 

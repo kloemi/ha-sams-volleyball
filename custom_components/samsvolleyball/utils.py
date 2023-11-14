@@ -1,6 +1,7 @@
 import json
 import logging
 
+from datetime import timedelta
 from homeassistant.const import ATTR_ATTRIBUTION
 from homeassistant.util import dt as dt_util
 
@@ -136,14 +137,50 @@ def state_from_match(data: json , match: json):
         _LOGGER.debug(f"state_from_match - cannot extract state")
     return state
 
-def fill_attributes(attr, data, match, team_uuid):
-    attr[ATTR_ATTRIBUTION] = ATTRIBUTION
-    attr["sport"] = VOLLEYBALL
+def fill_attributes(attrs, data, match, team_uuid):
+    attrs[ATTR_ATTRIBUTION] = ATTRIBUTION
+    attrs["sport"] = VOLLEYBALL
     try:
-        attr["date"] = dt_util.as_local(dt_util.utc_from_timestamp(float(match["date"]) / 1000))
+        attrs["league"] = None
+        attrs["league_logo"] = None
+        attrs["team_abbr"] = None
+        attrs["opponent_abbr"] = None
+
+        attrs["event_name"] = None
+        attrs["date"] = dt_util.as_local(dt_util.utc_from_timestamp(float(match["date"]) / 1000))
+        attrs["kickoff_in"] = None
+        attrs["venue"] = None
+        attrs["location"] = None
+
+        attrs["team_name"] = None
+        attrs["team_id"] = None
+        attrs["team_record"] = None
+        attrs["team_rank"] = None
+        attrs["team_homeaway"] = None
+        attrs["team_logo"] = None
+        attrs["team_colors"] = None
+        attrs["team_score"] = None
+        attrs["team_winner"] = None
+
+        attrs["opponent_name"] = None
+        attrs["opponent_id"] = None
+        attrs["opponent_record"] = None
+        attrs["opponent_rank"] = None
+        attrs["opponent_homeaway"] = None
+        attrs["opponent_logo"] = None
+        attrs["opponent_colors"] = None
+        attrs["opponent_score"] = None
+        attrs["opponent_winner"] = None
+
+        attrs["quarter"] = None
+        attrs["clock"] = None
+
+        attrs["team_sets_won"] = None
+        attrs["opponent_sets_won"] = None
+
     except KeyError as e:
         _LOGGER.debug(f"fill_attributes - cannot extract attribute")
-    return attr
+    return attrs
 
-def update_match_attributes(attr, data, match, team_uuid):
-    return attr
+def update_match_attributes(attrs, data, match, team_uuid):
+    return attrs

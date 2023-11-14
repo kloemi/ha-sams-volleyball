@@ -2,10 +2,12 @@
 import json
 import logging
 
+from datetime import timedelta
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, CALLBACK_TYPE, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
 from typing import Any
@@ -21,6 +23,7 @@ from .utils import (
     fill_attributes,
     update_match_attributes,
 )
+
 from .const import (
     CONF_REGION,
     CONF_TEAM_NAME,
@@ -29,6 +32,7 @@ from .const import (
     DEFAULT_ICON,
     STATES_NOT_FOUND,
     STATES_PRE,
+    TIMEOUT_PERIOD_CHECK,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -43,7 +47,7 @@ async def async_setup_entry(
 
     # Create entities list.
     entities = [
-        SamsTeamTracker(coordinator, entry),
+        SamsTeamTracker(hass, coordinator, entry),
     ]
 
     # Add sensor entities.
@@ -57,12 +61,14 @@ class SamsTeamTracker(CoordinatorEntity):
     """Representation of a Sensor to provide team tracker compatible data."""
 
     def __init__(self,
+                 hass: HomeAssistant,
                  coordinator: SamsDataCoordinator,
                  entry: ConfigEntry,
     ) -> None:
         """Initialize sensor base entity."""
-        super().__init__(coordinator)
+        super().__init__( coordinator)
 
+        self.hass = hass
         self._coordinator = coordinator
         self._name = entry.data[CONF_TEAM_NAME]
         self._team_uuid = entry.data[CONF_TEAM_UUID]
@@ -71,6 +77,17 @@ class SamsTeamTracker(CoordinatorEntity):
         self._config = entry
         self._state = STATES_PRE
         self._attr = {}
+
+    async def async_added_to_hass(self) -> None:
+        """Subscribe timer events."""
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            async_track_time_interval(
+                self.hass,
+                self._coordinator.check_timeout,
+                timedelta(seconds=TIMEOUT_PERIOD_CHECK),
+            )
+        )
 
     def update_team(self, data: json):
         _LOGGER.debug("Update team data for sensor %s", self._name)
