@@ -9,7 +9,7 @@ from aiohttp import ClientSession, WSMessage, WSMsgType
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
 from .const import (
@@ -115,8 +115,8 @@ class SamsDataCoordinator(DataUpdateCoordinator):
         except ConnectionResetError:
             _LOGGER.info("Sams Websocket Connection Reset")
             await self._on_close()
-        except Exception as exc:
-            _LOGGER.warning("Error during processing new message: %s",exc)
+#        except Exception as exc:
+#            _LOGGER.warning("Error during processing new message: %s", exc.with_traceback())
 
     async def data_received(self):
         try:
@@ -145,7 +145,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
             self.ws = None
 
     async def check_timeout(self, now):
-        #check last received data
+        #check last received data time
         ts = dt_util.as_timestamp(now)
         diff = ts - self.last_receive_ts
         if diff > self.receive_timout:

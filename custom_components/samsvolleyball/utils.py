@@ -1,7 +1,7 @@
 import json
 import logging
+import arrow
 
-from datetime import timedelta
 from homeassistant.const import ATTR_ATTRIBUTION
 from homeassistant.util import dt as dt_util
 
@@ -97,7 +97,7 @@ def get_team(data: json, team_id):
                 series = allseries.get(series_id)
                 for team in series[TEAMS]:
                     if team[ID] == team_id:
-                        return team
+                        return team, series
     except KeyError as e:
         _LOGGER.debug(f"get_team - cannot extract team, %s", team_id)
 
@@ -108,15 +108,25 @@ def get_matches(data: json, team_id):
             matchdays = data[PAYLOAD][MATCHDAYS]
             for matchday in matchdays:
                 for match in matchday[MATCHES]:
-                    if match["team1"] == team_id or match["team2"] == team_id:
+                    if team_id in (match['team1'], match['team2']):
                         matches.append(match)
     except KeyError as e:
         _LOGGER.debug(f"get_team - cannot extract team, %s", team_id)
     return matches
 
+def get_match_state(data: json , match_id: str):
+    state = STATES_NOT_FOUND
+    try:
+        if is_ticker(data):
+            if match_id in data[PAYLOAD][MATCHSTATES]:
+                return data[PAYLOAD][MATCHSTATES][match_id]
+    except KeyError as e:
+        _LOGGER.debug(f"get_team - cannot extract team, %s", team_id)
+    return None
+
 def select_match(matches: list):
     #ToDo: select by date
-    return matches.pop(0)
+    return matches.pop(-1)
 
 def state_from_match(data: json , match: json):
     state = STATES_NOT_FOUND
@@ -137,43 +147,65 @@ def state_from_match(data: json , match: json):
         _LOGGER.debug(f"state_from_match - cannot extract state")
     return state
 
-def fill_attributes(attrs, data, match, team_uuid):
+def fill_attributes(attrs, data, match, team, lang):
     attrs[ATTR_ATTRIBUTION] = ATTRIBUTION
     attrs["sport"] = VOLLEYBALL
     try:
-        attrs["league"] = None
-        attrs["league_logo"] = None
-        attrs["team_abbr"] = None
-        attrs["opponent_abbr"] = None
+        match_id = match[ID]
+        match_state = get_match_state(data, match_id)
+        state = state_from_match(data, match)
+
+        if match["team1"] == team[ID]:
+            attrs["team_homeaway"] = "home"
+            attrs["opponent_homeaway"] = "away"
+            opponent, league = get_team(data, match["team2"])
+            team_num = "team1"
+            opponent_num = "team2"
+        else:
+            attrs["team_homeaway"] = "away"
+            attrs["opponent_homeaway"] = "home"
+            opponent, league = get_team(data, match["team1"])
+            team_num = "team2"
+            opponent_num = "team1"
+
+        if match_state:
+                attrs["team_score"] = match_state["setPoints"][team_num]
+                attrs["team_winner"] = None
+                attrs["opponent_score"] = match_state["setPoints"][opponent_num]
+                attrs["opponent_winner"] = None
+
+        attrs["league"] = league[NAME]
+        attrs["league_logo"] = None #ToDo: needed from region out of config
 
         attrs["event_name"] = None
-        attrs["date"] = dt_util.as_local(dt_util.utc_from_timestamp(float(match["date"]) / 1000))
-        attrs["kickoff_in"] = None
+        date = dt_util.as_local(dt_util.utc_from_timestamp(float(match["date"]) / 1000))
+        attrs["date"] = date
+        attrs["kickoff_in"] = arrow.get(date).humanize(locale=lang)
         attrs["venue"] = None
         attrs["location"] = None
 
-        attrs["team_name"] = None
-        attrs["team_id"] = None
+        attrs["team_name"] = team["name"]
+        attrs["team_abbr"] = team["shortName"] if (len(team["shortName"])>0) else team["letter"]
+        attrs["team_id"] = team[ID]
         attrs["team_record"] = None
         attrs["team_rank"] = None
-        attrs["team_homeaway"] = None
-        attrs["team_logo"] = None
-        attrs["team_colors"] = None
-        attrs["team_score"] = None
-        attrs["team_winner"] = None
+        attrs["team_logo"] = team["logoImage200"]
+        attrs["team_colors"] = "#ffffff,#000000" #ToDo: extract from logo?
 
-        attrs["opponent_name"] = None
-        attrs["opponent_id"] = None
+
+        attrs["opponent_name"] = opponent["name"]
+        attrs["opponent_abbr"] = opponent["shortName"] if (len(team["shortName"]) > 0) else team["letter"]
+        attrs["opponent_id"] = opponent[ID]
         attrs["opponent_record"] = None
         attrs["opponent_rank"] = None
-        attrs["opponent_homeaway"] = None
-        attrs["opponent_logo"] = None
-        attrs["opponent_colors"] = None
-        attrs["opponent_score"] = None
-        attrs["opponent_winner"] = None
+        attrs["opponent_logo"] = opponent["logoImage200"]
+        attrs["opponent_colors"] = "#ffffff,#000000"
+
 
         attrs["quarter"] = None
-        attrs["clock"] = None
+        if state == STATES_POST:
+            attrs["clock"] = dt_util.as_local(dt_util.utc_from_timestamp(float(match["date"]) / 1000)).time().strftime("%H:%M")
+        else: attrs["clock"] = ""
 
         attrs["team_sets_won"] = None
         attrs["opponent_sets_won"] = None

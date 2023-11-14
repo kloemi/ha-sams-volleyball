@@ -1,6 +1,7 @@
 """The sams volleyball sensor platform."""
 import json
 import logging
+import locale
 
 from datetime import timedelta
 from homeassistant.components.sensor import SensorEntity
@@ -77,6 +78,7 @@ class SamsTeamTracker(CoordinatorEntity):
         self._config = entry
         self._state = STATES_PRE
         self._attr = {}
+        self._lang = None
 
     async def async_added_to_hass(self) -> None:
         """Subscribe timer events."""
@@ -89,9 +91,15 @@ class SamsTeamTracker(CoordinatorEntity):
             )
         )
 
+        try:
+            self._lang = self.hass.config.language
+        except:
+            lang, _ = locale.getlocale()
+            self._lang = lang or "en_US"
+
     def update_team(self, data: json):
         _LOGGER.debug("Update team data for sensor %s", self._name)
-        self._team = get_team(data, self._team_uuid)
+        self._team, self._league = get_team(data, self._team_uuid)
         matches = get_matches(data, self._team_uuid)
         if len(matches) > 0:
             self._match = select_match(matches)
@@ -133,9 +141,9 @@ class SamsTeamTracker(CoordinatorEntity):
 
         data = self._coordinator.data
         if is_ticker(data):
-            self._attr = fill_attributes(self._attr, data, self._match, self._team_uuid)
+            self._attr = fill_attributes(self._attr, data, self._match, self._team, self._lang)
         if is_my_match(data, self._match):
-            self._attr = update_match_attributes(self._attr, data, self._match, self._team_uuid)
+            self._attr = update_match_attributes(self._attr, data, self._match, self._team)
 
         return self._attr
 
