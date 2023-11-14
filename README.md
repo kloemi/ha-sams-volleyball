@@ -8,7 +8,7 @@
 
 This integration provides real-time scores for volleyball teams that are provided by [sams](http://www.sams-server.de/) ticker.
 
-The initial version of that integration provides an enitity compatible to the great work of [ha-teamtracker](https://github.com/vasqued2/ha-teamtracker) and can be used with the [ha-teamtracker-card](https://github.com/vasqued2/ha-teamtracker-card) to display the game information in the Home Assistant dashboard.
+The initial version of that integration provides an entity compatible to the great work of [ha-teamtracker](https://github.com/vasqued2/ha-teamtracker) and can be used with the [ha-teamtracker-card](https://github.com/vasqued2/ha-teamtracker-card) to display the game information in the Home Assistant dashboard.
 
 ## Installation
 
