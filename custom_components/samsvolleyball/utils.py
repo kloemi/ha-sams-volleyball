@@ -24,8 +24,8 @@ MATCH_UUID = "matchUuid"
 TEAM = "team"
 TEAMS = "teams"
 TYPE = "type"
-TYPE_TICKER = "FETCH_ASSOCIATION_TICKER_RESPONSE"
 TYPE_MATCH = "MATCH_UPDATE"
+TYPE_TICKER = "FETCH_ASSOCIATION_TICKER_RESPONSE"
 
 SECONDS_PER_DAY = 24 * 60 * 60
 
@@ -298,6 +298,8 @@ def fill_attributes(attrs, data, match, team, lang):
                 attrs["team_winner"] = False
                 attrs["opponent_winner"] = True
 
+        attrs["last_update"] = dt_util.as_local(dt_util.now())
+
     except KeyError as e:
         _LOGGER.debug("fill_attributes - cannot extract attribute %s", e)
     return attrs
@@ -315,5 +317,7 @@ def update_match_attributes(attrs, data, match, team_uuid):
         opponent_num = "team1"
 
     attrs = fill_match_attrs(attrs, match_state, state, team_num, opponent_num)
+
+    attrs["last_update"] = dt_util.as_local(dt_util.now())
 
     return attrs

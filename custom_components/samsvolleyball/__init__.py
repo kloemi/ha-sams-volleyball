@@ -90,12 +90,16 @@ class SamsDataCoordinator(DataUpdateCoordinator):
         _LOGGER.debug("Connection opened")
         self.connected = True
 
+    async def update_data(self, data):
+        self.async_set_updated_data(data)
+        self.last_receive_ts = dt_util.as_timestamp(dt_util.utcnow())
+
     async def _on_message(self, message: WSMessage):
         if message.type == WSMsgType.TEXT:
             data = json.loads(message.data)
             _LOGGER.debug("Received data: %s ", str(message)[1:500])
-            self.async_set_updated_data(data)
-            self.last_receive_ts = dt_util.as_timestamp(dt_util.utcnow())
+            if data:
+                await self.update_data(data)
         else:
             _LOGGER.info("Received unexpected message: %s ", str(message)[1:500])
 
@@ -109,9 +113,10 @@ class SamsDataCoordinator(DataUpdateCoordinator):
         except ConnectionResetError:
             _LOGGER.info("Sams Websocket Connection Reset")
             await self._on_close()
-
-    #        except Exception as exc:
-    #            _LOGGER.warning("Error during processing new message: %s", exc.with_traceback())
+        except Exception as exc:  # pylint: disable=broad-except
+            _LOGGER.warning(
+                "Error during processing new message: %s", exc.with_traceback()
+            )
 
     async def data_received(self):
         try:
@@ -126,7 +131,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
             self.ws = await self.session.ws_connect(self.websocket_url, autoclose=False)
             self.ws_task = self.loop.create_task(self._process_messages())
             await self._on_open()
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             _LOGGER.warning("Error during processing new message: %s", exc)
             self.disconnect()
 
