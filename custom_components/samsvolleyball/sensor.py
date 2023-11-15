@@ -1,45 +1,45 @@
 """The sams volleyball sensor platform."""
-import json
-import logging
-import locale
+from __future__ import annotations
 
+import locale
+import logging
 from datetime import timedelta
-from homeassistant.components.sensor import SensorEntity
+from typing import Any
+
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, CALLBACK_TYPE, callback
 from homeassistant.const import ATTR_ATTRIBUTION
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
-from typing import Any
 
 from . import SamsDataCoordinator
-from .utils import (
-    is_ticker,
-    is_my_match,
-    get_team,
-    get_matches,
-    select_match,
-    state_from_match,
-    fill_attributes,
-    update_match_attributes,
-)
-
 from .const import (
     ATTRIBUTION,
     CONF_REGION,
     CONF_TEAM_NAME,
     CONF_TEAM_UUID,
-    DOMAIN,
     DEFAULT_ICON,
+    DOMAIN,
     STATES_NOT_FOUND,
     STATES_PRE,
     TIMEOUT_PERIOD_CHECK,
     VOLLEYBALL,
 )
+from .utils import (
+    fill_attributes,
+    get_matches,
+    get_team,
+    is_my_match,
+    is_ticker,
+    select_match,
+    state_from_match,
+    update_match_attributes,
+)
 
 _LOGGER = logging.getLogger(__name__)
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -47,7 +47,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the sams volleyball sensor platform."""
-    coordinator  = hass.data[DOMAIN][entry.data[CONF_REGION]]
+    coordinator = hass.data[DOMAIN][entry.data[CONF_REGION]]
 
     # Create entities list.
     entities = [
@@ -57,20 +57,22 @@ async def async_setup_entry(
     # Add sensor entities.
     async_add_entities(entities, True)
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
+
 
 class SamsTeamTracker(CoordinatorEntity):
     """Representation of a Sensor to provide team tracker compatible data."""
 
-    def __init__(self,
-                 hass: HomeAssistant,
-                 coordinator: SamsDataCoordinator,
-                 entry: ConfigEntry,
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        coordinator: SamsDataCoordinator,
+        entry: ConfigEntry,
     ) -> None:
         """Initialize sensor base entity."""
-        super().__init__( coordinator)
+        super().__init__(coordinator)
 
         self.hass = hass
         self._coordinator = coordinator
@@ -80,8 +82,8 @@ class SamsTeamTracker(CoordinatorEntity):
         self._match = None
         self._config = entry
         self._state = STATES_PRE
-        self._attr = {}
-        self._lang = None
+        self._attr: dict[str, Any] = {}
+        self._lang: str = ""
 
     async def async_added_to_hass(self) -> None:
         """Subscribe timer events."""
@@ -96,11 +98,11 @@ class SamsTeamTracker(CoordinatorEntity):
 
         try:
             self._lang = self.hass.config.language
-        except:
+        finally:
             lang, _ = locale.getlocale()
             self._lang = lang or "en_US"
 
-    def update_team(self, data: json):
+    def update_team(self, data):
         _LOGGER.debug("Update team data for sensor %s", self._name)
         self._team, self._league = get_team(data, self._team_uuid)
         matches = get_matches(data, self._team_uuid)
@@ -141,16 +143,20 @@ class SamsTeamTracker(CoordinatorEntity):
 
         self._attr[ATTR_ATTRIBUTION] = ATTRIBUTION
         self._attr["sport"] = VOLLEYBALL
-        self._attr["league_logo"] = None #ToDo: needed from region out of config
+        self._attr["league_logo"] = None  # ToDo: needed from region out of config
 
         if self.coordinator.data is None:
             return self._attr
 
         data = self._coordinator.data
         if is_ticker(data):
-            self._attr = fill_attributes(self._attr, data, self._match, self._team, self._lang)
+            self._attr = fill_attributes(
+                self._attr, data, self._match, self._team, self._lang
+            )
         if is_my_match(data, self._match):
-            self._attr = update_match_attributes(self._attr, data, self._match, self._team)
+            self._attr = update_match_attributes(
+                self._attr, data, self._match, self._team
+            )
 
         return self._attr
 

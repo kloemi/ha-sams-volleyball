@@ -1,6 +1,6 @@
 {
   "name": "Sams Volleyball Tracker",
-  "render_readme": true, 
+  "render_readme": true,
   "zip_release": true,
   "filename": "samsvolleyball.zip",
   "homeassistant": "2021.11.0"

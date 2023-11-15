@@ -1,8 +1,9 @@
 """The sams-volleyball integration."""
 from __future__ import annotations
+
 import asyncio
-import logging
 import json
+import logging
 import urllib.parse
 
 from aiohttp import ClientSession, WSMessage, WSMsgType
@@ -12,16 +13,10 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
-from .const import (
-    CONF_HOST,
-    CONF_REGION,
-    DOMAIN,
-    NO_GAME_TIMEOUT,
-    PLATFORMS,
-    VERSION,
-)
+from .const import CONF_HOST, CONF_REGION, DOMAIN, NO_GAME_TIMEOUT, PLATFORMS, VERSION
 
 _LOGGER = logging.getLogger(__name__)
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up sams-volleyball from a config entry."""
@@ -39,13 +34,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # we already have a coordinator for that region
         coordinator = domain_data[entry.data[CONF_REGION]]
     else:
-        #create new coordinator for the sams region
+        # create new coordinator for the sams region
         session = async_get_clientsession(hass)
-        coordinator  = SamsDataCoordinator(hass, session, name, url)
+        coordinator = SamsDataCoordinator(hass, session, name, url)
         domain_data[entry.data[CONF_REGION]] = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
+
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
@@ -60,19 +56,17 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
     return unload_ok
 
+
 class SamsDataCoordinator(DataUpdateCoordinator):
     """Class to manage fetching sams ticker data. It is intantiated once per used region/websocket."""
 
-    def __init__(self,
-                 hass: HomeAssistant,
-                 session: ClientSession,
-                 name,
-                 websocket_url
-                 ) -> None:
-        """ init websocket instance"""
+    def __init__(
+        self, hass: HomeAssistant, session: ClientSession, name, websocket_url
+    ) -> None:
+        """init websocket instance"""
         self.hass = hass
         self.session = session
-        self.name =  name
+        self.name = name
         self.websocket_url = websocket_url
         self.ws = None
         self.ws_task = None
@@ -85,7 +79,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         if not self.ws or not self.connected:
-            _LOGGER.debug("Connect to %s",self.websocket_url)
+            _LOGGER.debug("Connect to %s", self.websocket_url)
             await self.connect()
 
     async def _on_close(self):
@@ -115,8 +109,9 @@ class SamsDataCoordinator(DataUpdateCoordinator):
         except ConnectionResetError:
             _LOGGER.info("Sams Websocket Connection Reset")
             await self._on_close()
-#        except Exception as exc:
-#            _LOGGER.warning("Error during processing new message: %s", exc.with_traceback())
+
+    #        except Exception as exc:
+    #            _LOGGER.warning("Error during processing new message: %s", exc.with_traceback())
 
     async def data_received(self):
         try:
@@ -145,12 +140,12 @@ class SamsDataCoordinator(DataUpdateCoordinator):
             self.ws = None
 
     async def check_timeout(self, now):
-        #check last received data time
+        # check last received data time
         ts = dt_util.as_timestamp(now)
         diff = ts - self.last_receive_ts
         if diff > self.receive_timout:
-            self.last_receive_ts = ts #prevent rush of reconnects
-            _LOGGER.info("Sams Websocket reset - recive data timeout")
+            self.last_receive_ts = ts  # prevent rush of reconnects
+            _LOGGER.info("Sams Websocket reset - receive data timeout")
             await self.disconnect()
             await self.connect()
 

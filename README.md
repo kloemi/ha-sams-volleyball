@@ -19,7 +19,7 @@ The initial version of that integration provides an entity compatible to the gre
 3. Restart Home Assistant
 4. Add Integration via [UI](https://my.home-assistant.io/redirect/integrations/) or click [HERE](https://my.home-assistant.io/redirect/config_flow_start/?domain=samsvolleyball)
 
-### Manual installation 
+### Manual installation
 
 1. Copy all files from custom_components/webuntis/ to custom_components/samsvolleyball/ inside your config Home Assistant directory.
 2. Restart Home Assistant

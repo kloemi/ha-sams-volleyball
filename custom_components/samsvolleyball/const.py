@@ -1,6 +1,5 @@
 """Constants for the samsvolleyball integration."""
-from homeassistant.const import Platform
-from homeassistant.const import CONF_NAME
+from homeassistant.const import CONF_NAME, Platform
 
 # Misc
 DOMAIN = "samsvolleyball"
@@ -42,8 +41,8 @@ CONF_REGION_LIST = [
     "vvrp",
 ]
 
-TIMEOUT_PERIOD_CHECK = 5 # sec
-NO_GAME_TIMEOUT = 12 * 60 # 12 min.
+TIMEOUT_PERIOD_CHECK = 5  # sec
+NO_GAME_TIMEOUT = 12 * 60  # 12 min.
 
 DEFAULT_ICON = "mdi:volleyball"
 VOLLEYBALL = "volleyball"
