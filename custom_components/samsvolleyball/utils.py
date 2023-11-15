@@ -156,18 +156,22 @@ def date_from_match(match) -> datetime:
 
 def select_match(data, matches: list):
     # assumes matches are sorted by date
-    min_timediff = sys.float_info.max
-    next_match = None
-
     for match in matches:
         state = state_from_match(data, match)
         # prefer active matches
         if STATES_IN == state:
             return match
+
+    for match in matches:
         if STATES_POST == state:
             duration = (dt_util.now() - date_from_match(match)).total_seconds()
             if duration < SECONDS_PER_DAY:
                 return match
+
+    min_timediff = sys.float_info.max
+    next_match = None
+
+    for match in matches:
         if STATES_PRE == state:
             # select the next
             time_to_start = (date_from_match(match) - dt_util.now()).total_seconds()
