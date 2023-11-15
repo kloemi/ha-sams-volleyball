@@ -3,5 +3,5 @@
   "render_readme": true,
   "zip_release": true,
   "filename": "samsvolleyball.zip",
-  "homeassistant": "2021.11.0"
+  "homeassistant": "2022.4.0"
 }
