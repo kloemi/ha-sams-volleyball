@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import sys
+from datetime import datetime
 
 import arrow
 from homeassistant.util import dt as dt_util
@@ -24,6 +26,8 @@ TEAMS = "teams"
 TYPE = "type"
 TYPE_TICKER = "FETCH_ASSOCIATION_TICKER_RESPONSE"
 TYPE_MATCH = "MATCH_UPDATE"
+
+SECONDS_PER_DAY = 24 * 60 * 60
 
 
 def is_ticker(data) -> bool:
@@ -127,17 +131,11 @@ def get_match_state(data, match_id: str):
     return
 
 
-def select_match(matches: list):
-    # ToDo: select by date
-    return matches.pop(-1)
-
-
 def state_from_match(data, match):
     state = STATES_NOT_FOUND
     try:
-        match_id = match[ID]
-        if match_id in data[PAYLOAD][MATCHSTATES]:
-            match_state = data[PAYLOAD][MATCHSTATES][match_id]
+        match_state = get_match_state(data, match[ID])
+        if match_state:
             if match_state["finished"]:
                 state = STATES_POST
             else:
@@ -150,6 +148,38 @@ def state_from_match(data, match):
     except KeyError:
         _LOGGER.debug("state_from_match - cannot extract state")
     return state
+
+
+def date_from_match(match) -> datetime:
+    return dt_util.as_local(dt_util.utc_from_timestamp(float(match["date"]) / 1000))
+
+
+def select_match(data, matches: list):
+    # assumes matches are sorted by date
+    min_timediff = sys.float_info.max
+    next_match = None
+
+    for match in matches:
+        state = state_from_match(data, match)
+        # prefer active matches
+        if STATES_IN == state:
+            return match
+        if STATES_POST == state:
+            duration = (dt_util.now() - date_from_match(match)).total_seconds()
+            if duration < SECONDS_PER_DAY:
+                return match
+        if STATES_PRE == state:
+            # select the next
+            time_to_start = (date_from_match(match) - dt_util.now()).total_seconds()
+            if time_to_start < min_timediff:
+                min_timediff = time_to_start
+                next_match = match
+
+    if next_match:
+        return next_match
+
+    # fallback return latest
+    return matches.pop(-1)
 
 
 def fill_attributes(attrs, data, match, team, lang):
@@ -179,7 +209,7 @@ def fill_attributes(attrs, data, match, team, lang):
         attrs["league"] = league[NAME]
 
         attrs["event_name"] = None
-        date = dt_util.as_local(dt_util.utc_from_timestamp(float(match["date"]) / 1000))
+        date = date_from_match(match)
         attrs["date"] = date
         attrs["kickoff_in"] = arrow.get(date).humanize(locale=lang)
         attrs["venue"] = None
