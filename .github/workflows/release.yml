@@ -21,13 +21,13 @@ jobs:
           python3 ${{ github.workspace }}/.github/scripts/update_hacs_manifest.py --version ${{ steps.version.outputs.version }}
       - name: Create zip
         run: |
-          cd custom_components/webuntis
+          cd custom_components/samsvolleyball
           zip samsvolleyball.zip -r ./
       - name: Upload zip to release
         uses: svenstaro/upload-release-action@v1-release
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ./custom_components/samsvolleyball/webuntis.zip
+          file: ./custom_components/samsvolleyball/samsvolleyball.zip
           asset_name: samsvolleyball.zip
           tag: ${{ github.ref }}
           overwrite: true
