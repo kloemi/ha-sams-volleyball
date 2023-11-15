@@ -131,10 +131,9 @@ def get_match_state(data, match_id: str):
     return
 
 
-def state_from_match(data, match):
+def state_from_match_state(match_state):
     state = STATES_NOT_FOUND
     try:
-        match_state = get_match_state(data, match[ID])
         if match_state:
             if match_state["finished"]:
                 state = STATES_POST
@@ -145,6 +144,16 @@ def state_from_match(data, match):
                     state = STATES_PRE
         else:
             state = STATES_PRE
+    except KeyError:
+        _LOGGER.debug("state_from_match - cannot extract state")
+    return state
+
+
+def state_from_match(data, match):
+    state = STATES_NOT_FOUND
+    try:
+        match_state = get_match_state(data, match[ID])
+        return state_from_match_state(match_state)
     except KeyError:
         _LOGGER.debug("state_from_match - cannot extract state")
     return state
@@ -163,6 +172,7 @@ def select_match(data, matches: list):
             return match
 
     for match in matches:
+        state = state_from_match(data, match)
         if STATES_POST == state:
             duration = (dt_util.now() - date_from_match(match)).total_seconds()
             if duration < SECONDS_PER_DAY:
@@ -172,6 +182,7 @@ def select_match(data, matches: list):
     next_match = None
 
     for match in matches:
+        state = state_from_match(data, match)
         if STATES_PRE == state:
             # select the next
             time_to_start = (date_from_match(match) - dt_util.now()).total_seconds()
@@ -186,10 +197,46 @@ def select_match(data, matches: list):
     return matches.pop(-1)
 
 
+def get_set_string(match_state, team_num, opponent_num, offset):
+    set_string = ""
+    sets = match_state["matchSets"]
+    for i in range(len(sets) - offset):
+        match_set = sets[i]
+        if len(set_string) > 0:
+            set_string += " | "
+        set_string += f"{match_set['setScore'][team_num]} ({match_set['setNumber']}) {match_set['setScore'][opponent_num]}"
+    return set_string
+
+
+def fill_match_attrs(attrs, match_state, state, team_num, opponent_num):
+    attrs["team_winner"] = None
+    attrs["opponent_winner"] = None
+
+    attrs["team_sets_won"] = match_state["setPoints"][team_num]
+    attrs["opponent_sets_won"] = match_state["setPoints"][opponent_num]
+
+    if STATES_POST == state:
+        attrs["team_score"] = match_state["setPoints"][team_num]
+        attrs["opponent_score"] = match_state["setPoints"][opponent_num]
+
+        attrs["team_winner"] = int(attrs["team_score"]) > attrs["opponent_score"]
+        attrs["opponent_winner"] = int(attrs["opponent_score"]) > attrs["team_score"]
+        attrs["clock"] = get_set_string(match_state, team_num, opponent_num, 0)
+
+    if STATES_IN == state:
+        attrs["team_score"] = match_state["matchSets"][-1]["setScore"][team_num]
+        attrs["opponent_score"] = match_state["matchSets"][-1]["setScore"][opponent_num]
+
+        attrs["clock"] = match_state["matchSets"][-1]["setNumber"]
+        attrs["last_play"] = get_set_string(match_state, team_num, opponent_num, 1)
+
+    return attrs
+
+
 def fill_attributes(attrs, data, match, team, lang):
     try:
         match_id = match[ID]
-        match_state = get_match_state(data, match_id)
+        state = state_from_match(data, match)
 
         if match["team1"] == team[ID]:
             attrs["team_homeaway"] = "home"
@@ -203,12 +250,6 @@ def fill_attributes(attrs, data, match, team, lang):
             opponent, league = get_team(data, match["team1"])
             team_num = "team2"
             opponent_num = "team1"
-
-        if match_state:
-            attrs["team_score"] = match_state["setPoints"][team_num]
-            attrs["team_winner"] = None
-            attrs["opponent_score"] = match_state["setPoints"][opponent_num]
-            attrs["opponent_winner"] = None
 
         attrs["league"] = league[NAME]
 
@@ -242,14 +283,14 @@ def fill_attributes(attrs, data, match, team, lang):
         attrs["quarter"] = None
 
         state = state_from_match(data, match)
+
+        match_state = get_match_state(data, match_id)
+        if match_state:
+            attrs = fill_match_attrs(attrs, match_state, state, team_num, opponent_num)
+        else:
+            attrs["clock"] = ""
+
         if state == STATES_POST:
-            attrs["clock"] = (
-                dt_util.as_local(
-                    dt_util.utc_from_timestamp(float(match["date"]) / 1000)
-                )
-                .time()
-                .strftime("%H:%M")
-            )
             if attrs["team_score"] > attrs["opponent_score"]:
                 attrs["team_winner"] = True
                 attrs["opponent_winner"] = False
@@ -257,16 +298,22 @@ def fill_attributes(attrs, data, match, team, lang):
                 attrs["team_winner"] = False
                 attrs["opponent_winner"] = True
 
-        else:
-            attrs["clock"] = ""
-
-        attrs["team_sets_won"] = None
-        attrs["opponent_sets_won"] = None
-
     except KeyError as e:
         _LOGGER.debug("fill_attributes - cannot extract attribute %s", e)
     return attrs
 
 
 def update_match_attributes(attrs, data, match, team_uuid):
+    match_state = data[PAYLOAD]
+    state = state_from_match_state(match_state)
+
+    if match["team1"] == team_uuid:
+        team_num = "team1"
+        opponent_num = "team2"
+    else:
+        team_num = "team2"
+        opponent_num = "team1"
+
+    attrs = fill_match_attrs(attrs, match_state, state, team_num, opponent_num)
+
     return attrs

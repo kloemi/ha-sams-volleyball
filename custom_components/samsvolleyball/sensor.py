@@ -98,16 +98,16 @@ class SamsTeamTracker(CoordinatorEntity):
 
         try:
             self._lang = self.hass.config.language
-        finally:
+        except Exception:  # pylint: disable=broad-except
             lang, _ = locale.getlocale()
             self._lang = lang or "en_US"
 
     def update_team(self, data):
         _LOGGER.debug("Update team data for sensor %s", self._name)
-        self._team, self._league = get_team(data, self._team_uuid)
+        self._team, _ = get_team(data, self._team_uuid)
         matches = get_matches(data, self._team_uuid)
         if len(matches) > 0:
-            self._match = select_match(matches)
+            self._match = select_match(data, matches)
             self._state = state_from_match(data, self._match)
         else:
             self._state = STATES_NOT_FOUND
