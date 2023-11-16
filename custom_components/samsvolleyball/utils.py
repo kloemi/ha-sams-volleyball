@@ -242,6 +242,7 @@ def _get_ranking(league, team_id):
 def fill_attributes(attrs, data, match, team, lang):
     try:
         match_id = match[ID]
+        attrs["match_id"] = match_id
         state = state_from_match(data, match)
 
         league = None
@@ -260,6 +261,9 @@ def fill_attributes(attrs, data, match, team, lang):
             opponent, league = get_team(data, match["team1"])
             team_num = "team2"
             opponent_num = "team1"
+
+        attrs["team_num"] = team_num
+        attrs["opponent_num"] = opponent_num
 
         if league and opponent:
             rank_team = _get_ranking(league, team[ID])
@@ -328,12 +332,8 @@ def update_match_attributes(attrs, data, match, team_uuid):
     match_state = data[PAYLOAD]
     state = state_from_match_state(match_state)
 
-    if match["team1"] == team_uuid:
-        team_num = "team1"
-        opponent_num = "team2"
-    else:
-        team_num = "team2"
-        opponent_num = "team1"
+    team_num = attrs["team_num"]
+    opponent_num = attrs["opponent_num"]
 
     attrs = fill_match_attrs(attrs, match_state, state, team_num, opponent_num)
 
