@@ -294,7 +294,7 @@ def fill_attributes(attrs, data, match, team, lang):
         attrs["team_id"] = team[ID]
 
         attrs["team_logo"] = team["logoImage200"]
-        attrs["team_colors"] = "#ffffff,#000000"  # ToDo: extract from logo?
+        attrs["team_colors"] = ["#ffffff", "#000000"]  # ToDo: extract from logo?
 
         attrs["opponent_name"] = opponent["name"]
         attrs["opponent_abbr"] = (
@@ -302,7 +302,7 @@ def fill_attributes(attrs, data, match, team, lang):
         )
         attrs["opponent_id"] = opponent[ID]
         attrs["opponent_logo"] = opponent["logoImage200"]
-        attrs["opponent_colors"] = "#ffffff,#000000"
+        attrs["opponent_colors"] = ["#ffffff", "#000000"]
 
         attrs["quarter"] = None
 
