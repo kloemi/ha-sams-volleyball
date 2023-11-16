@@ -27,7 +27,7 @@ The initial version of that integration provides an entity compatible to the gre
 
 ## Configuration via UI
 ### Configure association
-![image](https://github.com/kloemi/ha-sams-volleyball/assets/114607732/faf5b193-a1f9-40c8-8e66-ce01933b41cf)
+![image](https://github.com/kloemi/ha-sams-volleyball/assets/114607732/336a25f9-ce62-4e99-89ae-88ec16a2752a)
 Select the association of the team you like to track
 
 ### Configure league
