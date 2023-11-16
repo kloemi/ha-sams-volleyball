@@ -43,4 +43,4 @@ The integration creates per team an entity in the format `sensor.NAME_entity`.
 
 |Sensor  |Type|Description
 |:-----------|:---|:------------
-|`sensor.team_name`| team_tracker | data compatible to ha-teamtracker.
+|`sensor.team_name`| team_tracker | data compatible to [ha-teamtracker](https://github.com/vasqued2/ha-teamtracker).
