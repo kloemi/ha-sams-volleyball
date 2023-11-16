@@ -197,7 +197,7 @@ def select_match(data, matches: list):
     return matches.pop(-1)
 
 
-def get_set_string(match_state, team_num, opponent_num, offset):
+def _get_set_string(match_state, team_num, opponent_num, offset):
     set_string = ""
     sets = match_state["matchSets"]
     for i in range(len(sets) - offset):
@@ -221,22 +221,32 @@ def fill_match_attrs(attrs, match_state, state, team_num, opponent_num):
 
         attrs["team_winner"] = int(attrs["team_score"]) > attrs["opponent_score"]
         attrs["opponent_winner"] = int(attrs["opponent_score"]) > attrs["team_score"]
-        attrs["clock"] = get_set_string(match_state, team_num, opponent_num, 0)
+        attrs["clock"] = _get_set_string(match_state, team_num, opponent_num, 0)
 
     if STATES_IN == state:
         attrs["team_score"] = match_state["matchSets"][-1]["setScore"][team_num]
         attrs["opponent_score"] = match_state["matchSets"][-1]["setScore"][opponent_num]
 
         attrs["clock"] = match_state["matchSets"][-1]["setNumber"]
-        attrs["last_play"] = get_set_string(match_state, team_num, opponent_num, 1)
+        attrs["last_play"] = _get_set_string(match_state, team_num, opponent_num, 1)
 
     return attrs
+
+
+def _get_ranking(league, team_id):
+    for rank in league["rankings"]["fullRankings"]:
+        if rank["team"][ID] == team_id:
+            return rank
 
 
 def fill_attributes(attrs, data, match, team, lang):
     try:
         match_id = match[ID]
         state = state_from_match(data, match)
+
+        league = None
+        rank_team = None
+        rank_opponent = None
 
         if match["team1"] == team[ID]:
             attrs["team_homeaway"] = "home"
@@ -250,6 +260,19 @@ def fill_attributes(attrs, data, match, team, lang):
             opponent, league = get_team(data, match["team1"])
             team_num = "team2"
             opponent_num = "team1"
+
+        if league and opponent:
+            rank_team = _get_ranking(league, team[ID])
+            rank_opponent = _get_ranking(league, opponent[ID])
+
+            attrs[
+                "team_record"
+            ] = f"{rank_team['scoreDetails']['matchesPlayed']} - {rank_team['scoreDetails']['winScore']}"
+            attrs["team_rank"] = rank_team["rankingPosition"]
+            attrs[
+                "opponent_record"
+            ] = f"{rank_opponent['scoreDetails']['matchesPlayed']} - {rank_opponent['scoreDetails']['winScore']}"
+            attrs["opponent_rank"] = rank_opponent["rankingPosition"]
 
         attrs["league"] = league[NAME]
 
@@ -265,8 +288,7 @@ def fill_attributes(attrs, data, match, team, lang):
             team["shortName"] if (len(team["shortName"]) > 0) else team["letter"]
         )
         attrs["team_id"] = team[ID]
-        attrs["team_record"] = None
-        attrs["team_rank"] = None
+
         attrs["team_logo"] = team["logoImage200"]
         attrs["team_colors"] = "#ffffff,#000000"  # ToDo: extract from logo?
 
@@ -275,15 +297,12 @@ def fill_attributes(attrs, data, match, team, lang):
             opponent["shortName"] if (len(team["shortName"]) > 0) else team["letter"]
         )
         attrs["opponent_id"] = opponent[ID]
-        attrs["opponent_record"] = None
-        attrs["opponent_rank"] = None
         attrs["opponent_logo"] = opponent["logoImage200"]
         attrs["opponent_colors"] = "#ffffff,#000000"
 
         attrs["quarter"] = None
 
         state = state_from_match(data, match)
-
         match_state = get_match_state(data, match_id)
         if match_state:
             attrs = fill_match_attrs(attrs, match_state, state, team_num, opponent_num)
@@ -301,7 +320,7 @@ def fill_attributes(attrs, data, match, team, lang):
         attrs["last_update"] = dt_util.as_local(dt_util.now())
 
     except KeyError as e:
-        _LOGGER.debug("fill_attributes - cannot extract attribute %s", e)
+        _LOGGER.warning("Fill_attributes - cannot extract attribute %s", e)
     return attrs
 
 
