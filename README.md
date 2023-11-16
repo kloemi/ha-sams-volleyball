@@ -26,6 +26,17 @@ The initial version of that integration provides an entity compatible to the gre
 4. Add Integration via [UI](https://my.home-assistant.io/redirect/integrations/) or click [HERE](https://my.home-assistant.io/redirect/config_flow_start/?domain=samsvolleyball)
 
 ## Configuration via UI
+### Configure association
+![image](https://github.com/kloemi/ha-sams-volleyball/assets/114607732/336a25f9-ce62-4e99-89ae-88ec16a2752a)
+
+Select the association of the team you like to track
+
+### Configure league
+![image](https://github.com/kloemi/ha-sams-volleyball/assets/114607732/2ce38b8d-e513-47d6-9f46-3b1d07f5fa8a)
+
+### Select your favourite team
+![image](https://github.com/kloemi/ha-sams-volleyball/assets/114607732/8c73ceb3-f608-43ae-8a9a-d0c6cef5f1db)
+
 
 ## Entities
 
@@ -33,4 +44,4 @@ The integration creates per team an entity in the format `sensor.NAME_entity`.
 
 |Sensor  |Type|Description
 |:-----------|:---|:------------
-|`sensor.team_name`| team_tracker | data compatible to ha-teamtracker.
+|`sensor.team_name`| team_tracker | data compatible to [ha-teamtracker](https://github.com/vasqued2/ha-teamtracker).
