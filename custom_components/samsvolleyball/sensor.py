@@ -28,7 +28,8 @@ from .const import (
     VOLLEYBALL,
 )
 from .utils import (
-    fill_attributes,
+    fill_match_attributes,
+    fill_team_attributes,
     get_matches,
     get_team,
     is_my_match,
@@ -149,14 +150,23 @@ class SamsTeamTracker(CoordinatorEntity):
             return self._attr
 
         data = self._coordinator.data
-        if is_ticker(data):
-            self._attr = fill_attributes(
-                self._attr, data, self._match, self._team, self._lang
-            )
-        if is_my_match(data, self._match):
-            self._attr = update_match_attributes(
-                self._attr, data, self._match, self._team
-            )
+
+        try:
+            if is_ticker(data):
+                if self._match:
+                    self._attr = fill_match_attributes(
+                        self._attr, data, self._match, self._team, self._lang
+                    )
+                else:
+                    self._attr = fill_team_attributes(
+                        self._attr, data, self._team, self._state
+                    )
+            if is_my_match(data, self._match):
+                self._attr = update_match_attributes(
+                    self._attr, data, self._match, self._team
+                )
+        except Exception as e:
+            _LOGGER.warning("Fill attributes - exception %s", e)
 
         return self._attr
 

@@ -215,6 +215,18 @@ def fill_match_attrs(attrs, match_state, state, team_num, opponent_num):
     attrs["team_sets_won"] = match_state["setPoints"][team_num]
     attrs["opponent_sets_won"] = match_state["setPoints"][opponent_num]
 
+    sets = match_state["matchSets"]
+    attrs["match_sets_points"] = []
+
+    for match_set in sets:
+        attrs["match_sets_points"].append(
+            [
+                match_set["setScore"][team_num],
+                match_set["setNumber"],
+                match_set["setScore"][opponent_num],
+            ]
+        )
+
     if STATES_POST == state:
         attrs["team_score"] = match_state["setPoints"][team_num]
         attrs["opponent_score"] = match_state["setPoints"][opponent_num]
@@ -239,15 +251,43 @@ def _get_ranking(league, team_id):
             return rank
 
 
-def fill_attributes(attrs, data, match, team, lang):
+def fill_team_attributes(attrs, data, team, state):
+    try:
+        _, league = get_team(data, team[ID])
+        rank_team = _get_ranking(league, team[ID])
+        attrs[
+            "team_record"
+        ] = f"{rank_team['scoreDetails']['matchesPlayed']} - {rank_team['scoreDetails']['winScore']}"
+        attrs["team_rank"] = rank_team["rankingPosition"]
+        attrs["league"] = league[NAME]
+        attrs["last_update"] = dt_util.as_local(dt_util.now())
+
+        attrs["team_name"] = team["name"]
+        if STATES_NOT_FOUND == state:
+            attrs["team_abbr"] = team[NAME]
+        else:
+            attrs["team_abbr"] = (
+                team["shortName"] if (len(team["shortName"]) > 0) else team["letter"]
+            )
+        attrs["team_id"] = team[ID]
+
+        attrs["team_logo"] = team["logoImage200"]
+        attrs["team_colors"] = ["#ffffff", "#000000"]  # ToDo: extract from logo?
+
+    except KeyError as e:  # pylint: disable=broad-except
+        _LOGGER.warning("Fill_attributes - cannot extract attribute %s", e)
+    return attrs
+
+
+def fill_match_attributes(attrs, data, match, team, lang):
     try:
         match_id = match[ID]
         attrs["match_id"] = match_id
         state = state_from_match(data, match)
 
         league = None
-        rank_team = None
         rank_opponent = None
+        attrs = fill_team_attributes(attrs, data, team, state)
 
         if match["team1"] == team[ID]:
             attrs["team_homeaway"] = "home"
@@ -266,19 +306,11 @@ def fill_attributes(attrs, data, match, team, lang):
         attrs["opponent_num"] = opponent_num
 
         if league and opponent:
-            rank_team = _get_ranking(league, team[ID])
             rank_opponent = _get_ranking(league, opponent[ID])
-
-            attrs[
-                "team_record"
-            ] = f"{rank_team['scoreDetails']['matchesPlayed']} - {rank_team['scoreDetails']['winScore']}"
-            attrs["team_rank"] = rank_team["rankingPosition"]
             attrs[
                 "opponent_record"
             ] = f"{rank_opponent['scoreDetails']['matchesPlayed']} - {rank_opponent['scoreDetails']['winScore']}"
             attrs["opponent_rank"] = rank_opponent["rankingPosition"]
-
-        attrs["league"] = league[NAME]
 
         attrs["event_name"] = None
         date = date_from_match(match)
@@ -286,15 +318,6 @@ def fill_attributes(attrs, data, match, team, lang):
         attrs["kickoff_in"] = arrow.get(date).humanize(locale=lang)
         attrs["venue"] = None
         attrs["location"] = None
-
-        attrs["team_name"] = team["name"]
-        attrs["team_abbr"] = (
-            team["shortName"] if (len(team["shortName"]) > 0) else team["letter"]
-        )
-        attrs["team_id"] = team[ID]
-
-        attrs["team_logo"] = team["logoImage200"]
-        attrs["team_colors"] = ["#ffffff", "#000000"]  # ToDo: extract from logo?
 
         attrs["opponent_name"] = opponent["name"]
         attrs["opponent_abbr"] = (
@@ -321,9 +344,7 @@ def fill_attributes(attrs, data, match, team, lang):
                 attrs["team_winner"] = False
                 attrs["opponent_winner"] = True
 
-        attrs["last_update"] = dt_util.as_local(dt_util.now())
-
-    except KeyError as e:
+    except KeyError as e:  # pylint: disable=broad-except
         _LOGGER.warning("Fill_attributes - cannot extract attribute %s", e)
     return attrs
 
