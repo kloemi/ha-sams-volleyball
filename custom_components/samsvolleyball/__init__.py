@@ -13,7 +13,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
-from .const import CONF_HOST, CONF_REGION, DOMAIN, NO_GAME_TIMEOUT, PLATFORMS, VERSION
+from .const import CONF_HOST, CONF_REGION, DOMAIN, NO_GAME, PLATFORMS, TIMEOUT, VERSION
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -73,7 +73,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
         self.last_receive_ts = dt_util.as_timestamp(dt_util.utcnow())
         self.connected = False
         self.loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
-        self.receive_timout = NO_GAME_TIMEOUT
+        self.receive_timout = TIMEOUT[NO_GAME]
 
         super().__init__(hass, _LOGGER, name=self.name)
 
@@ -87,7 +87,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
         self.connected = False
 
     async def _on_open(self):
-        _LOGGER.debug("Connection opened")
+        _LOGGER.info("Connection opened")
         self.connected = True
 
     async def update_data(self, data):
@@ -100,8 +100,13 @@ class SamsDataCoordinator(DataUpdateCoordinator):
             _LOGGER.debug("Received data: %s ", str(message)[1:500])
             if data:
                 await self.update_data(data)
+                if self.receive_timout == TIMEOUT[NO_GAME]:
+                    _LOGGER.info("%s - no game active - close socket.", self.name)
+                    self._disconnect()
         else:
-            _LOGGER.info("Received unexpected message: %s ", str(message)[1:500])
+            _LOGGER.info(
+                "%s - received unexpected message: %s ", self.name, str(message)[1:500]
+            )
 
     async def _process_messages(self):
         try:
@@ -111,7 +116,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
             _LOGGER.warning("Sams Websocket runtime error %s", exc)
             await self._on_close()
         except ConnectionResetError:
-            _LOGGER.info("Sams Websocket Connection Reset")
+            _LOGGER.info("%s Websocket Connection Reset", self.name)
             await self._on_close()
         except Exception as exc:  # pylint: disable=broad-except
             _LOGGER.warning(
@@ -129,6 +134,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
     async def connect(self):
         try:
             self.ws = await self.session.ws_connect(self.websocket_url, autoclose=False)
+            self.loop = asyncio.get_event_loop()
             self.ws_task = self.loop.create_task(self._process_messages())
             await self._on_open()
         except Exception as exc:  # pylint: disable=broad-except
@@ -146,13 +152,27 @@ class SamsDataCoordinator(DataUpdateCoordinator):
 
     async def check_timeout(self, now):
         # check last received data time
+        await self.update_timeout()
         ts = dt_util.as_timestamp(now)
         diff = ts - self.last_receive_ts
         if diff > self.receive_timout:
             self.last_receive_ts = ts  # prevent rush of reconnects
-            _LOGGER.info("Sams Websocket reset - receive data timeout")
+            _LOGGER.info("%s Sams Websocket reset - receive data timeout", self.name)
             await self.disconnect()
             await self.connect()
+
+    async def update_timeout(self):
+        match_active = NO_GAME
+        for _, active_cb in list(self._listeners.values()):
+            # call function get_active_state
+            active = active_cb()
+            if active > match_active:
+                match_active = active
+        timeout = TIMEOUT[match_active]
+        if timeout < self.receive_timout:
+            await self.disconnect()
+            await self.connect()
+        self.receive_timout = timeout
 
     def hasListener(self) -> bool:
         return len(self._listeners) > 0

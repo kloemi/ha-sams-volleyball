@@ -12,6 +12,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 from homeassistant.util import slugify
 
 from . import SamsDataCoordinator
@@ -22,6 +23,10 @@ from .const import (
     CONF_TEAM_UUID,
     DEFAULT_ICON,
     DOMAIN,
+    IN_GAME,
+    NEAR_GAME,
+    NO_GAME,
+    STATES_IN,
     STATES_NOT_FOUND,
     STATES_PRE,
     TIMEOUT_PERIOD_CHECK,
@@ -73,7 +78,7 @@ class SamsTeamTracker(CoordinatorEntity):
         entry: ConfigEntry,
     ) -> None:
         """Initialize sensor base entity."""
-        super().__init__(coordinator)
+        super().__init__(coordinator, context=self.get_active_state)
 
         self.hass = hass
         self._coordinator = coordinator
@@ -113,6 +118,18 @@ class SamsTeamTracker(CoordinatorEntity):
         else:
             self._state = STATES_NOT_FOUND
             self._match = None
+
+    def get_active_state(self):
+        # check if we are nearby (2 hours before / 3 hours behind)
+        if self._state != STATES_NOT_FOUND:
+            if self._state == STATES_IN:
+                return IN_GAME
+            if self._match and "date" in self._attr:
+                date = self._attr["date"]
+                duration = (dt_util.now() - date).total_seconds()
+                if duration > (-2 * 60 * 60) and duration < (3 * 60 * 60):
+                    return NEAR_GAME
+        return NO_GAME
 
     @callback
     def _handle_coordinator_update(self) -> None:
