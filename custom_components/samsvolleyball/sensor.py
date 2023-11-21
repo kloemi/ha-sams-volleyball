@@ -24,6 +24,7 @@ from .const import (
     DEFAULT_ICON,
     DOMAIN,
     IN_GAME,
+    LEAGUE_URL_LOGO_MAP,
     NEAR_GAME,
     NO_GAME,
     STATES_IN,
@@ -161,7 +162,7 @@ class SamsTeamTracker(CoordinatorEntity):
 
         self._attr[ATTR_ATTRIBUTION] = ATTRIBUTION
         self._attr["sport"] = VOLLEYBALL
-        self._attr["league_logo"] = None  # ToDo: needed from region out of config
+        self._attr["league_logo"] = LEAGUE_URL_LOGO_MAP[self._config.data[CONF_REGION]]
 
         if self.coordinator.data is None:
             return self._attr
