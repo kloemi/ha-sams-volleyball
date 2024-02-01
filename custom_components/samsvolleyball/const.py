@@ -66,8 +66,8 @@ NEAR_GAME = 1
 IN_GAME = 2
 
 TIMEOUT = {
-    NO_GAME: 2 * 60 * 60, # 2h min.
-    NEAR_GAME: 12 * 60, # 12 min.
+    NO_GAME: 2 * 60 * 60,  # 2h min.
+    NEAR_GAME: 12 * 60,  # 12 min.
     IN_GAME: 5 * 60,  # 5 min.
 }
 

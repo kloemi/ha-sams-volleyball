@@ -6,7 +6,7 @@ import json
 import logging
 import urllib.parse
 
-from aiohttp import ClientSession, WSMessage, WSMsgType
+from aiohttp import ClientError, ClientSession, WSMessage, WSMsgType
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -125,7 +125,11 @@ class SamsDataCoordinator(DataUpdateCoordinator):
 
     async def data_received(self):
         try:
-            ws = await self.session.ws_connect(self.websocket_url, autoclose=False)
+            ws = await self.session.ws_connect(
+                self.websocket_url,
+                autoclose=False,
+                origin="https://baden.sams-ticker.de",
+            )
             data = await ws.receive_json()
         finally:
             await ws.close()
@@ -133,11 +137,15 @@ class SamsDataCoordinator(DataUpdateCoordinator):
 
     async def connect(self):
         try:
-            self.ws = await self.session.ws_connect(self.websocket_url, autoclose=False)
+            self.ws = await self.session.ws_connect(
+                self.websocket_url,
+                autoclose=False,
+                origin="https://baden.sams-ticker.de",
+            )
             self.loop = asyncio.get_event_loop()
             self.ws_task = self.loop.create_task(self._process_messages())
             await self._on_open()
-        except Exception as exc:  # pylint: disable=broad-except
+        except ClientError as exc:  # pylint: disable=broad-except
             _LOGGER.warning("Error during processing new message: %s", exc)
             self.disconnect()
 
