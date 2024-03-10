@@ -27,7 +27,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     domain_data = hass.data.setdefault(DOMAIN, {})
     name = f"Sams Tracker {entry.data[CONF_REGION].capitalize()}"
-    entry.unique_id = name
     url = urllib.parse.urljoin(entry.data[CONF_HOST], entry.data[CONF_REGION])
 
     if entry.data[CONF_REGION] in domain_data:
