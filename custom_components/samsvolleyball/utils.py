@@ -255,10 +255,11 @@ def fill_team_attributes(attrs, data, team, state):
     try:
         _, league = get_team(data, team[ID])
         rank_team = _get_ranking(league, team[ID])
-        attrs[
-            "team_record"
-        ] = f"{rank_team['scoreDetails']['matchesPlayed']} - {rank_team['scoreDetails']['winScore']}"
-        attrs["team_rank"] = rank_team["rankingPosition"]
+        if rank_team:
+            attrs[
+                "team_record"
+            ] = f"{rank_team['scoreDetails']['matchesPlayed']} - {rank_team['scoreDetails']['winScore']}"
+            attrs["team_rank"] = rank_team["rankingPosition"]
         attrs["league"] = league[NAME]
         attrs["last_update"] = dt_util.as_local(dt_util.now())
 
