@@ -42,7 +42,7 @@ CONF_REGION_LIST = [
 ]
 
 LEAGUE_URL_LOGO_MAP = {
-    "baden": "https://www.sbvv-online.de/cms/files/layout/images/logos/logo_sbvv.png",
+    "baden": "https://www.sbvv-online.de/cms/files/Baden_Dateien/layout/images/logos/logo_sbvv.png",
     "bvv": "https://vvb.sams-server.de/cms/files/VVB_Dateien/layout_homepage/logo/vvb_logo.jpg",
     "dvv": "https://www.volleyball-verband.de/?proxy=img/logo_dvv.png",
     "flvb": "https://flvb.lu/images/logos/FLVB%20Logo%2060%20ans%20SVG.svg",
