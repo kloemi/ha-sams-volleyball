@@ -73,6 +73,15 @@ class SamsDataCoordinator(DataUpdateCoordinator):
         self.connected = False
         self.loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
         self.receive_timout = TIMEOUT[NO_GAME]
+        self.headers = {
+            "Connection": "Upgrade",
+            "Pragma": "no-cache",
+            "Cache-Control": "no-cache",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+            "Upgrade": "websocket",
+            "Accept-Encoding": "gzip, deflate, br, zstd",
+            "Accept-Language": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7",
+        }
 
         super().__init__(hass, _LOGGER, name=self.name)
 
@@ -127,9 +136,10 @@ class SamsDataCoordinator(DataUpdateCoordinator):
             ws = await self.session.ws_connect(
                 self.websocket_url,
                 autoclose=False,
-                origin="https://baden.sams-ticker.de",
+                headers=self.headers,
             )
             data = await ws.receive_json()
+            _LOGGER.debug(data)
         finally:
             await ws.close()
         return data
@@ -139,7 +149,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
             self.ws = await self.session.ws_connect(
                 self.websocket_url,
                 autoclose=False,
-                origin="https://baden.sams-ticker.de",
+                headers=self.headers,
             )
             self.loop = asyncio.get_event_loop()
             self.ws_task = self.loop.create_task(self._process_messages())

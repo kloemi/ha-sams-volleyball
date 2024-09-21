@@ -18,6 +18,8 @@ from homeassistant.util import slugify
 from . import SamsDataCoordinator
 from .const import (
     ATTRIBUTION,
+    CONF_LEAGUE,
+    CONF_LEAGUE_GENDER,
     CONF_REGION,
     CONF_TEAM_NAME,
     CONF_TEAM_UUID,
@@ -38,6 +40,7 @@ from .utils import (
     fill_team_attributes,
     get_matches,
     get_team,
+    get_uuid,
     is_my_match,
     is_ticker,
     select_match,
@@ -84,7 +87,9 @@ class SamsTeamTracker(CoordinatorEntity):
         self.hass = hass
         self._coordinator = coordinator
         self._name = entry.data[CONF_TEAM_NAME]
-        self._team_uuid = entry.data[CONF_TEAM_UUID]
+        self._team_uuid = [entry.data[CONF_TEAM_UUID]]
+        self._team_league = entry.data[CONF_LEAGUE]
+        self._team_gender = entry.data[CONF_LEAGUE_GENDER]
         self._team = None
         self._match = None
         self._config = entry
@@ -111,9 +116,15 @@ class SamsTeamTracker(CoordinatorEntity):
 
     def update_team(self, data):
         _LOGGER.debug("Update team data for sensor %s", self._name)
-        self._team, _ = get_team(data, self._team_uuid)
-        matches = get_matches(data, self._team_uuid)
+        uuid_list = get_uuid(data, self._name, self._team_league)
+        self._team, _ = get_team(data, uuid_list[0])
+        matches = []
+        idx = 0
+        while len(matches) == 0 and idx < len(uuid_list):
+            matches = get_matches(data, uuid_list[idx])
+            idx = idx + 1
         if len(matches) > 0:
+            self._team_uuid = uuid_list[idx]
             self._match = select_match(data, matches)
             self._state = state_from_match(data, self._match)
         else:

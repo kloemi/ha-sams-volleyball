@@ -94,6 +94,22 @@ def get_league_data(data, league_id, field):
         _LOGGER.debug("get_league_data - cannot extract field, %s", field)
 
 
+def get_uuid(data, name, league):
+    uuid = []
+    try:
+        if is_ticker(data):
+            allseries = data[PAYLOAD][MATCHSERIES]
+            for series_id in allseries:
+                series = allseries.get(series_id)
+                if series[NAME] == league:
+                    for team in series[TEAMS]:
+                        if team[NAME] == name:
+                            uuid.append(team[ID])
+    except KeyError as e:
+        _LOGGER.debug("get_uuid - cannot extract uuid", e)
+    return uuid
+
+
 def get_team(data, team_id):
     try:
         if is_ticker(data):
