@@ -98,7 +98,7 @@ def get_league_data(data, league_id, field):
         _LOGGER.debug("get_league_data - cannot extract field, %s", field)
 
 
-def get_uuid(data, name, league):
+def get_uuids(data, name, league):
     uuid = []
     try:
         if is_ticker(data):

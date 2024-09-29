@@ -20,6 +20,7 @@ from .const import (
     ATTRIBUTION,
     CONF_GENDER,
     CONF_LEAGUE,
+    CONF_LEAGUE_NAME,
     CONF_REGION,
     CONF_TEAM_NAME,
     CONF_TEAM_UUID,
@@ -40,7 +41,7 @@ from .utils import (
     fill_team_attributes,
     get_matches,
     get_team,
-    get_uuid,
+    get_uuids,
     is_my_match,
     is_ticker,
     select_match,
@@ -89,6 +90,7 @@ class SamsTeamTracker(CoordinatorEntity):
         self._name = entry.data[CONF_TEAM_NAME]
         self._team_uuid = [entry.data[CONF_TEAM_UUID]]
         self._team_league = entry.data[CONF_LEAGUE]
+        self._league_name = entry.data[CONF_LEAGUE_NAME]
         self._team_gender = entry.data[CONF_GENDER]
         self._team = None
         self._match = None
@@ -116,7 +118,7 @@ class SamsTeamTracker(CoordinatorEntity):
 
     def update_team(self, data):
         _LOGGER.debug("Update team data for sensor %s", self._name)
-        uuid_list = get_uuid(data, self._name, self._team_league)
+        uuid_list = get_uuids(data, self._name, self._league_name)
         self._team, _ = get_team(data, uuid_list[0])
         matches = []
         idx = 0
@@ -125,11 +127,13 @@ class SamsTeamTracker(CoordinatorEntity):
             idx = idx + 1
         if len(matches) > 0:
             self._team_uuid = uuid_list[idx - 1]
+            self._team, _ = get_team(data, self._team_uuid)
             self._match = select_match(data, matches)
             self._state = state_from_match(data, self._match)
         else:
             self._state = STATES_NOT_FOUND
             self._match = None
+
 
     def get_active_state(self):
         # check if we are nearby (2 hours before / 3 hours behind)

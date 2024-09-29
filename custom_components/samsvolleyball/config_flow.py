@@ -127,13 +127,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             {
                 vol.Required(CONF_GENDER): selector.SelectSelector(
                     selector.SelectSelectorConfig(
-                        options=CONF_GENDER_LIST, translation_key=CONF_GENDER
+                        options = CONF_GENDER_LIST, translation_key=CONF_GENDER
                     )
                 )
             }
         )
         return self.async_show_form(
-            step_id="gender", data_schema=step_gender_schema, errors=errors
+            step_id = "gender", data_schema = step_gender_schema, errors = errors
         )
 
     async def async_step_league(
