@@ -124,7 +124,7 @@ class SamsTeamTracker(CoordinatorEntity):
             matches = get_matches(data, uuid_list[idx])
             idx = idx + 1
         if len(matches) > 0:
-            self._team_uuid = uuid_list[idx]
+            self._team_uuid = uuid_list[idx-1]
             self._match = select_match(data, matches)
             self._state = state_from_match(data, self._match)
         else:
