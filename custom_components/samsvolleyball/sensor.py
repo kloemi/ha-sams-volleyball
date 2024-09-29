@@ -18,8 +18,8 @@ from homeassistant.util import slugify
 from . import SamsDataCoordinator
 from .const import (
     ATTRIBUTION,
+    CONF_GENDER,
     CONF_LEAGUE,
-    CONF_LEAGUE_GENDER,
     CONF_REGION,
     CONF_TEAM_NAME,
     CONF_TEAM_UUID,
@@ -89,7 +89,7 @@ class SamsTeamTracker(CoordinatorEntity):
         self._name = entry.data[CONF_TEAM_NAME]
         self._team_uuid = [entry.data[CONF_TEAM_UUID]]
         self._team_league = entry.data[CONF_LEAGUE]
-        self._team_gender = entry.data[CONF_LEAGUE_GENDER]
+        self._team_gender = entry.data[CONF_GENDER]
         self._team = None
         self._match = None
         self._config = entry

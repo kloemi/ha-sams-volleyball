@@ -17,6 +17,11 @@
                     "region": "Verband"
                 }
             },
+            "gender": {
+                "data": {
+                    "gender": "Geschlecht"
+                }
+            },
             "league": {
                 "data": {
                     "league": "Liga"
@@ -48,6 +53,13 @@
                 "vlw": "Württemberg",
                 "vvb": "Berlin",
                 "vvrp": "Rheinland-Pfalz"
+            }
+        },
+        "gender": {
+            "options": {
+                "female": "Damen",
+                "male": "Herren",
+                "mixed": "Mixed"
             }
         }
     }

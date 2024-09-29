@@ -8,12 +8,11 @@ PLATFORMS = [Platform.SENSOR]
 CONF_HOST = "host"
 CONF_REGION = "region"
 CONF_LEAGUE = "league"
-CONF_LEAGUE_GENDER = "gender"
+CONF_GENDER = "gender"
 CONF_GENDER_FEMALE = "FEMALE"
 CONF_GENDER_MALE = "MALE"
 CONF_GENDER_MIXED = "MIXED"
 CONF_LEAGUE_NAME = "league_name"
-CONF_GENDER_FILTER = "gender_filter"
 
 CONF_TEAM_NAME = "team"
 CONF_TEAM_UUID = "team_id"
@@ -43,6 +42,12 @@ CONF_REGION_LIST = [
     "vlw",
     "vvb",
     "vvrp",
+]
+
+CONF_GENDER_LIST = [
+    "female",
+    "male",
+    "mixed",
 ]
 
 LEAGUE_URL_LOGO_MAP = {

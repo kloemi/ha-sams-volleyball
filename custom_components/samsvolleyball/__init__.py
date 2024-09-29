@@ -85,22 +85,27 @@ class SamsDataCoordinator(DataUpdateCoordinator):
 
         super().__init__(hass, _LOGGER, name=self.name)
 
+
     async def _async_update_data(self):
         if not self.ws or not self.connected:
             _LOGGER.debug("Connect to %s", self.websocket_url)
             await self.connect()
 
+
     async def _on_close(self):
         _LOGGER.debug("Connection closed")
         self.connected = False
+
 
     async def _on_open(self):
         _LOGGER.info("Connection opened")
         self.connected = True
 
+
     async def update_data(self, data):
         self.async_set_updated_data(data)
         self.last_receive_ts = dt_util.as_timestamp(dt_util.utcnow())
+
 
     async def _on_message(self, message: WSMessage):
         if message.type == WSMsgType.TEXT:
@@ -115,6 +120,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
             _LOGGER.info(
                 "%s - received unexpected message: %s ", self.name, str(message)[1:500]
             )
+
 
     async def _process_messages(self):
         try:
@@ -131,6 +137,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
                 "Error during processing new message: %s", exc.with_traceback()
             )
 
+
     async def data_received(self):
         try:
             ws = await self.session.ws_connect(
@@ -143,6 +150,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
         finally:
             await ws.close()
         return data
+
 
     async def connect(self):
         try:
@@ -158,6 +166,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
             _LOGGER.warning("Error during processing new message: %s", exc)
             self.disconnect()
 
+
     async def disconnect(self):
         """Close web socket connection"""
         if self.ws_task is not None:
@@ -166,6 +175,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
         if self.ws is not None:
             await self.ws.close()
             self.ws = None
+
 
     async def check_timeout(self, now):
         # check last received data time
@@ -177,6 +187,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
             _LOGGER.info("%s Sams Websocket reset - receive data timeout", self.name)
             await self.disconnect()
             await self.connect()
+
 
     async def update_timeout(self):
         match_active = NO_GAME
@@ -190,6 +201,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
             await self.disconnect()
             await self.connect()
         self.receive_timout = timeout
+
 
     def hasListener(self) -> bool:
         return len(self._listeners) > 0

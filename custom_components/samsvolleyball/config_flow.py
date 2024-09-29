@@ -15,13 +15,13 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from . import SamsDataCoordinator
 from .const import (
+    CONF_GENDER,
     CONF_GENDER_FEMALE,
-    CONF_GENDER_FILTER,
+    CONF_GENDER_LIST,
     CONF_GENDER_MALE,
     CONF_GENDER_MIXED,
     CONF_HOST,
     CONF_LEAGUE,
-    CONF_LEAGUE_GENDER,
     CONF_LEAGUE_NAME,
     CONF_REGION,
     CONF_REGION_LIST,
@@ -48,11 +48,11 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
     }
 )
 
-GENDER_MAP = [
-    {"label": "female", "value": CONF_GENDER_FEMALE},
-    {"label": "male", "value": CONF_GENDER_MALE},
-    {"label": "mixed", "value": CONF_GENDER_MIXED},
-]
+GENDER_MAP = {
+    "female": CONF_GENDER_FEMALE,
+    "male": CONF_GENDER_MALE,
+    "mixed": CONF_GENDER_MIXED,
+}
 
 
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]):
@@ -120,14 +120,14 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> FlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
-            self.cfg_data[CONF_LEAGUE_GENDER] = user_input[CONF_LEAGUE_GENDER]
+            self.cfg_data[CONF_GENDER] = GENDER_MAP[user_input[CONF_GENDER]]
             return await self.async_step_league()
 
         step_gender_schema = vol.Schema(
             {
-                vol.Required(CONF_LEAGUE_GENDER): selector.SelectSelector(
+                vol.Required(CONF_GENDER): selector.SelectSelector(
                     selector.SelectSelectorConfig(
-                        options=GENDER_MAP, translation_key=CONF_GENDER_FILTER
+                        options=CONF_GENDER_LIST, translation_key=CONF_GENDER
                     )
                 )
             }
@@ -152,7 +152,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self.cfg_data[CONF_LEAGUE] = user_input[CONF_LEAGUE]
                 return await self.async_step_team()
 
-        leagues_filter = get_leaguelist(self.data, self.cfg_data[CONF_LEAGUE_GENDER])
+        leagues_filter = get_leaguelist(self.data, self.cfg_data[CONF_GENDER])
         league_select = []
         for league in leagues_filter:
             league_select.append({"label": league["name"], "value": league["id"]})
@@ -160,9 +160,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         step_league_schema = vol.Schema(
             {
                 vol.Required(CONF_LEAGUE): selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=league_select, translation_key=CONF_GENDER_FILTER
-                    )
+                    selector.SelectSelectorConfig(options=league_select)
                 )
             }
         )
