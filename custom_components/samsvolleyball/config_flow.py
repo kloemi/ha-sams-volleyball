@@ -15,6 +15,10 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from . import SamsDataCoordinator
 from .const import (
+    CONF_GENDER_FEMALE,
+    CONF_GENDER_FILTER,
+    CONF_GENDER_MALE,
+    CONF_GENDER_MIXED,
     CONF_HOST,
     CONF_LEAGUE,
     CONF_LEAGUE_GENDER,
@@ -33,7 +37,6 @@ _LOGGER = logging.getLogger(__name__)
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
-        # vol.Optional(CONF_NAME, default=DEFAULT_OPTIONS[CONF_NAME]): str,
         vol.Required(CONF_HOST, default=DEFAULT_OPTIONS[CONF_HOST]): str,
         vol.Required(
             CONF_REGION, default=DEFAULT_OPTIONS[CONF_REGION]
@@ -44,6 +47,12 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         ),
     }
 )
+
+GENDER_MAP = [
+    {"label": "female", "value": CONF_GENDER_FEMALE},
+    {"label": "male", "value": CONF_GENDER_MALE},
+    {"label": "mixed", "value": CONF_GENDER_MIXED},
+]
 
 
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]):
@@ -100,10 +109,31 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
-                return await self.async_step_league()
+                return await self.async_step_gender()
 
         return self.async_show_form(
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
+        )
+
+    async def async_step_gender(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            self.cfg_data[CONF_LEAGUE_GENDER] = user_input[CONF_LEAGUE_GENDER]
+            return await self.async_step_league()
+
+        step_gender_schema = vol.Schema(
+            {
+                vol.Required(CONF_LEAGUE_GENDER): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=GENDER_MAP, translation_key=CONF_GENDER_FILTER
+                    )
+                )
+            }
+        )
+        return self.async_show_form(
+            step_id="gender", data_schema=step_gender_schema, errors=errors
         )
 
     async def async_step_league(
@@ -111,11 +141,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> FlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
-            league_id = self.leagues[user_input[CONF_LEAGUE]]
+            league_id = user_input[CONF_LEAGUE]
             self.teams = get_teamlist(self.data, league_id)
-            self.cfg_data[CONF_LEAGUE_GENDER] = get_league_data(
-                self.data, league_id, CONF_LEAGUE_GENDER
-            )
             self.cfg_data[CONF_LEAGUE_NAME] = get_league_data(
                 self.data, league_id, "name"
             )
@@ -125,9 +152,18 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self.cfg_data[CONF_LEAGUE] = user_input[CONF_LEAGUE]
                 return await self.async_step_team()
 
+        leagues_filter = get_leaguelist(self.data, self.cfg_data[CONF_LEAGUE_GENDER])
+        league_select = []
+        for league in leagues_filter:
+            league_select.append({"label": league["name"], "value": league["id"]})
+
         step_league_schema = vol.Schema(
             {
-                vol.Required(CONF_LEAGUE): vol.In(list(self.leagues.keys())),
+                vol.Required(CONF_LEAGUE): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=league_select, translation_key=CONF_GENDER_FILTER
+                    )
+                )
             }
         )
         return self.async_show_form(

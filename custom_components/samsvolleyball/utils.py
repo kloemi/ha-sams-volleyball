@@ -15,6 +15,7 @@ PAYLOAD = "payload"
 MATCHSERIES = "matchSeries"
 CLASS = "class"
 CLASS_LEAGUE = "League"
+GENDER = "gender"
 ID = "id"
 NAME = "name"
 MATCHDAYS = "matchDays"
@@ -48,18 +49,21 @@ def is_my_match(data, match) -> bool:
     return False
 
 
-def get_leaguelist(data) -> dict[str, str]:
-    leagues: dict[str, str] = {}
+def get_leaguelist(data, gender=None) -> list[dict[str, str]]:
+    leagues: list[dict[str, str]] = []
     try:
         if is_ticker(data):
             allseries = data[PAYLOAD][MATCHSERIES]
             for series_id in allseries:
                 series = allseries.get(series_id)
-                if series[CLASS] == CLASS_LEAGUE:
-                    leagues[series[NAME]] = series_id
+                if gender:
+                    if series[GENDER] == gender and series[CLASS] == CLASS_LEAGUE:
+                        leagues.append({NAME: series[NAME], ID: series_id})
+                elif series[CLASS] == CLASS_LEAGUE:
+                    leagues.append({NAME: series[NAME], ID: series_id})
     except KeyError as e:
         _LOGGER.debug("get_leaguelist - cannot extract leagues %s", e)
-        leagues = {}
+        leagues = []
 
     return leagues
 
