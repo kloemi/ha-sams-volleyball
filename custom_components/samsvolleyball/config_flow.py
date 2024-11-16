@@ -29,6 +29,7 @@ from .const import (
     CONF_TEAM_UUID,
     CONFIG_ENTRY_VERSION,
     DEFAULT_OPTIONS,
+    DOMAIN,
     URL_GET,
 )
 from .utils import SamsUtils
@@ -81,7 +82,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]):
     return data, leagues
 
 
-class ConfigFlow(config_entries.ConfigFlow):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for samsvolleyball."""
 
     VERSION = CONFIG_ENTRY_VERSION
