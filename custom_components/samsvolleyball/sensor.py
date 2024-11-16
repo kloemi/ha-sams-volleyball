@@ -32,22 +32,10 @@ from .const import (
     NO_GAME,
     STATES_IN,
     STATES_NOT_FOUND,
-    STATES_PRE,
     TIMEOUT_PERIOD_CHECK,
     VOLLEYBALL,
 )
-from .utils import (
-    fill_match_attributes,
-    fill_team_attributes,
-    get_matches,
-    get_team,
-    get_uuids,
-    is_my_match,
-    is_ticker,
-    select_match,
-    state_from_match,
-    update_match_attributes,
-)
+from .utils import SamsUtils
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -95,9 +83,11 @@ class SamsTeamTracker(CoordinatorEntity):
         self._team = None
         self._match = None
         self._config = entry
-        self._state = STATES_PRE
+        self._state = STATES_NOT_FOUND
         self._attr: dict[str, Any] = {}
         self._lang: str = ""
+        self._ticker_data = None
+        self._match_data = None
 
     async def async_added_to_hass(self) -> None:
         """Subscribe timer events."""
@@ -116,34 +106,47 @@ class SamsTeamTracker(CoordinatorEntity):
             lang, _ = locale.getlocale()
             self._lang = lang or "en_US"
 
-    def update_team(self, data):
+    def _update_match(self, data):
+        if self._match and SamsUtils.is_my_match(data, self._match):
+            self._match_data = SamsUtils.get_match_data(data)
+            _LOGGER.debug("Update match data for sensor %s", self._name)
+
+    def _update_overview(self, data):
         _LOGGER.debug("Update team data for sensor %s", self._name)
-        uuid_list = get_uuids(data, self._name, self._league_name)
-        self._team, _ = get_team(data, uuid_list[0])
+        self._ticker_data = data
+        uuid_list = SamsUtils.get_uuids(data, self._name, self._league_name)
+        if len(uuid_list) == 0:
+            _LOGGER.warning(
+                f"No team data found for {self._name} - {self._league_name}"
+            )
+            return
+        self._team, _ = SamsUtils.get_team(data, uuid_list[0])
         matches = []
         idx = 0
         while len(matches) == 0 and idx < len(uuid_list):
-            matches = get_matches(data, uuid_list[idx])
+            matches = SamsUtils.get_matches(data, uuid_list[idx])
             idx = idx + 1
         if len(matches) > 0:
             self._team_uuid = uuid_list[idx - 1]
-            self._team, _ = get_team(data, self._team_uuid)
-            self._match = select_match(data, matches)
-            self._state = state_from_match(data, self._match)
+            self._team, _ = SamsUtils.get_team(data, self._team_uuid)
+            self._match = SamsUtils.select_match(data, matches)
+            self._state = SamsUtils.state_from_match(data, self._match)
         else:
             self._state = STATES_NOT_FOUND
             self._match = None
 
-
     def get_active_state(self):
         # check if we are nearby (2 hours before / 3 hours behind)
+        if not self._ticker_data:
+            return NEAR_GAME
+
         if self._state != STATES_NOT_FOUND:
             if self._state == STATES_IN:
                 return IN_GAME
             if self._match and "date" in self._attr:
                 date = self._attr["date"]
                 duration = (dt_util.now() - date).total_seconds()
-                if duration > (-2 * 60 * 60) and duration < (3 * 60 * 60):
+                if (-2 * 60 * 60) < duration < (3 * 60 * 60):
                     return NEAR_GAME
         return NO_GAME
 
@@ -153,8 +156,10 @@ class SamsTeamTracker(CoordinatorEntity):
 
         data = self._coordinator.data
         if data is not None:
-            if is_ticker(data):
-                self.update_team(data)
+            if SamsUtils.is_overview(data):
+                self._update_overview(data)
+            elif SamsUtils.is_match(data):
+                self._update_match(data)
         super()._handle_coordinator_update()
 
     @property
@@ -179,24 +184,22 @@ class SamsTeamTracker(CoordinatorEntity):
         self._attr["sport"] = VOLLEYBALL
         self._attr["league_logo"] = LEAGUE_URL_LOGO_MAP[self._config.data[CONF_REGION]]
 
-        if self.coordinator.data is None:
+        if self._ticker_data is None:
             return self._attr
 
-        data = self._coordinator.data
-
         try:
-            if is_ticker(data):
-                if self._match:
-                    self._attr = fill_match_attributes(
-                        self._attr, data, self._match, self._team, self._lang
+            if self._match:
+                self._attr = SamsUtils.fill_match_attributes(
+                    self._attr, self._ticker_data, self._match, self._team, self._lang
+                )
+            else:
+                if self._team:
+                    self._attr = SamsUtils.fill_team_attributes(
+                        self._attr, self._ticker_data, self._team, self._state
                     )
-                else:
-                    self._attr = fill_team_attributes(
-                        self._attr, data, self._team, self._state
-                    )
-            if is_my_match(data, self._match):
-                self._attr = update_match_attributes(
-                    self._attr, data, self._match, self._team
+            if self._match_data:
+                self._attr = SamsUtils.update_match_attributes(
+                    self._attr, self._match_data, self._match, self._team
                 )
         except Exception as e:
             _LOGGER.warning("Fill attributes - exception %s", e)

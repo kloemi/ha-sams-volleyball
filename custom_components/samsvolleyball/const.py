@@ -25,6 +25,7 @@ DEFAULT_OPTIONS = {
     CONF_REGION: "baden",
 }
 
+URL_GET = "https://backend.sams-ticker.de/live/tickers/"
 CONF_REGION_LIST = [
     "baden",
     "bvv",

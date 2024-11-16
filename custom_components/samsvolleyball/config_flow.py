@@ -29,9 +29,9 @@ from .const import (
     CONF_TEAM_UUID,
     CONFIG_ENTRY_VERSION,
     DEFAULT_OPTIONS,
-    DOMAIN,
+    URL_GET,
 )
-from .utils import get_league_data, get_leaguelist, get_teamlist
+from .utils import SamsUtils
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -62,17 +62,18 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]):
     """
 
     url = urllib.parse.urljoin(data[CONF_HOST], data[CONF_REGION])
+    get_url = urllib.parse.urljoin(URL_GET, data[CONF_REGION])
     session = async_get_clientsession(hass)
-    coordinator = SamsDataCoordinator(hass, session, "ConfigValidate", url)
+    coordinator = SamsDataCoordinator(hass, session, "ConfigValidate", url, get_url)
 
     try:
-        data = await coordinator.data_received()
+        data = await coordinator.get_initial_data()
     except Exception as exc:
         raise CannotConnect from exc
     if not data:
         raise InvalidData
 
-    leagues = get_leaguelist(data)
+    leagues = SamsUtils.get_leaguelist(data)
     if 0 == len(leagues):
         raise InvalidData
 
@@ -80,7 +81,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]):
     return data, leagues
 
 
-class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow):
     """Handle a config flow for samsvolleyball."""
 
     VERSION = CONFIG_ENTRY_VERSION
@@ -127,13 +128,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             {
                 vol.Required(CONF_GENDER): selector.SelectSelector(
                     selector.SelectSelectorConfig(
-                        options = CONF_GENDER_LIST, translation_key=CONF_GENDER
+                        options=CONF_GENDER_LIST, translation_key=CONF_GENDER
                     )
                 )
             }
         )
         return self.async_show_form(
-            step_id = "gender", data_schema = step_gender_schema, errors = errors
+            step_id="gender", data_schema=step_gender_schema, errors=errors
         )
 
     async def async_step_league(
@@ -142,8 +143,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             league_id = user_input[CONF_LEAGUE]
-            self.teams = get_teamlist(self.data, league_id)
-            self.cfg_data[CONF_LEAGUE_NAME] = get_league_data(
+            self.teams = SamsUtils.get_teamlist(self.data, league_id)
+            self.cfg_data[CONF_LEAGUE_NAME] = SamsUtils.get_league_data(
                 self.data, league_id, "name"
             )
             if 0 == len(self.teams):
@@ -152,7 +153,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self.cfg_data[CONF_LEAGUE] = user_input[CONF_LEAGUE]
                 return await self.async_step_team()
 
-        leagues_filter = get_leaguelist(self.data, self.cfg_data[CONF_GENDER])
+        leagues_filter = SamsUtils.get_leaguelist(self.data, self.cfg_data[CONF_GENDER])
         league_select = []
         for league in leagues_filter:
             league_select.append({"label": league["name"], "value": league["id"]})
