@@ -56,9 +56,7 @@ class SamsUtils:
                 leagues = [
                     {NAME: series[NAME], ID: series_id}
                     for series_id, series in data[MATCHSERIES].items()
-                    if gender
-                    and series[GENDER] == gender
-                    and series[CLASS] == CLASS_LEAGUE
+                    if gender and series[GENDER] == gender and series[CLASS] == CLASS_LEAGUE
                 ]
             else:
                 leagues = [
@@ -69,13 +67,13 @@ class SamsUtils:
         return leagues
 
     @staticmethod
-    def get_league_by_id(data: dict, league_id: str) -> dict:
+    def get_league_by_id(data: dict, league_id:str)-> dict:
         if SamsUtils.is_overview(data):
             return data[MATCHSERIES][league_id]
         return {}
 
     @staticmethod
-    def get_teamlist(data: dict, league_id: str) -> dict[str, str]:
+    def get_teamlist(data:dict, league_id:str) -> dict[str, str]:
         teams: dict[str, str] = {}
         series = SamsUtils.get_league_by_id(data, league_id)
         for team in series[TEAMS]:
@@ -83,12 +81,12 @@ class SamsUtils:
         return teams
 
     @staticmethod
-    def get_league_data(data: dict, league_id: str, field):
+    def get_league_data(data:dict, league_id:str, field):
         series = SamsUtils.get_league_by_id(data, league_id)
         return series[field]
 
     @staticmethod
-    def get_uuids_by_name(data: dict, name: str, league: str):
+    def get_uuids_by_name(data:dict, name:str, league:str):
         uuid = []
         if SamsUtils.is_overview(data):
             for series_id in data[MATCHSERIES]:
@@ -100,7 +98,7 @@ class SamsUtils:
         return uuid
 
     @staticmethod
-    def get_team_by_id(data: dict, team_id: str):
+    def get_team_by_id(data:dict, team_id:str):
         if SamsUtils.is_overview(data):
             for series_id in data[MATCHSERIES]:
                 series = data[MATCHSERIES][series_id]
@@ -114,24 +112,24 @@ class SamsUtils:
         return data[PAYLOAD]
 
     @staticmethod
-    def get_matches(data: dict, team_id):
+    def get_matches(data:dict, team_id):
         matches = []
         if SamsUtils.is_overview(data):
             matchdays = data[MATCHDAYS]
             for matchday in matchdays:
                 for match in matchday[MATCHES]:
-                    if team_id in (match[TEAM + "1"], match[TEAM + "2"]):
+                    if team_id in (match[TEAM+"1"], match[TEAM+"2"]):
                         matches.append(match)
         return matches
 
     @staticmethod
-    def get_match_state(data: dict, match_id: str):
+    def get_match_state(data:dict, match_id: str):
         if SamsUtils.is_overview(data):
             if match_id in data[MATCHSTATES]:
                 return data[MATCHSTATES][match_id]
 
     @staticmethod
-    def state_from_match_state(match_state: dict):
+    def state_from_match_state(match_state:dict):
         state = STATES_NOT_FOUND
         if match_state:
             if match_state[FINISHED]:
@@ -146,7 +144,7 @@ class SamsUtils:
         return state
 
     @staticmethod
-    def state_from_match(data: dict, match: dict):
+    def state_from_match(data:dict, match:dict):
         match_state = SamsUtils.get_match_state(data, match[ID])
         return SamsUtils.state_from_match_state(match_state)
 
@@ -155,7 +153,7 @@ class SamsUtils:
         return dt_util.as_local(dt_util.utc_from_timestamp(float(match[DATE]) / 1000))
 
     @staticmethod
-    def select_match(data: dict, matches: list):
+    def select_match(data:dict, matches: list):
         # assumes matches are sorted by date
         for match in matches:
             state = SamsUtils.state_from_match(data, match)
@@ -204,9 +202,7 @@ class SamsUtils:
         return set_string
 
     @staticmethod
-    def fill_match_attrs(
-        attrs: dict, match_state: dict, state: str, team_num: str, opponent_num: str
-    ):
+    def fill_match_attrs(attrs:dict, match_state:dict, state:str, team_num:str, opponent_num:str):
         attrs["team_winner"] = None
         attrs["opponent_winner"] = None
 
@@ -251,13 +247,13 @@ class SamsUtils:
         return attrs
 
     @staticmethod
-    def _get_ranking(league: dict, team_id: str):
+    def _get_ranking(league:dict, team_id:str):
         for rank in league["rankings"]["fullRankings"]:
             if rank[TEAM][ID] == team_id:
                 return rank
 
     @staticmethod
-    def fill_team_attributes(attrs: dict, data: dict, team: dict, state: str):
+    def fill_team_attributes(attrs:dict, data:dict, team:dict, state:str):
         try:
             _, league = SamsUtils.get_team_by_id(data, team[ID])
             rank_team = SamsUtils._get_ranking(league, team[ID])
@@ -288,7 +284,7 @@ class SamsUtils:
         return attrs
 
     @staticmethod
-    def fill_match_attributes(attrs: dict, data: dict, match: dict, team: dict, lang):
+    def fill_match_attributes(attrs:dict, data:dict, match:dict, team:dict, lang):
         try:
             attrs["match_id"] = match[ID]
             state = SamsUtils.state_from_match(data, match)
@@ -339,7 +335,7 @@ class SamsUtils:
             match_state = SamsUtils.get_match_state(data, match[ID])
             if match_state:
                 attrs = SamsUtils.fill_match_attrs(
-                    attrs, match_state, match_state, team_num, opponent_num
+                    attrs, match_state, state, team_num, opponent_num
                 )
             else:
                 attrs["clock"] = ""
@@ -357,7 +353,7 @@ class SamsUtils:
         return attrs
 
     @staticmethod
-    def update_match_attributes(attrs: dict, data: dict):
+    def update_match_attributes(attrs:dict, data:dict):
         match_state = data
         state = SamsUtils.state_from_match_state(match_state)
 
