@@ -15,6 +15,8 @@ PAYLOAD = "payload"
 MATCHSERIES = "matchSeries"
 CLASS = "class"
 CLASS_LEAGUE = "League"
+DATE = "date"
+FINISHED = "finished"
 GENDER = "gender"
 ID = "id"
 NAME = "name"
@@ -26,6 +28,7 @@ TEAM = "team"
 TEAMS = "teams"
 TYPE = "type"
 TYPE_MATCH = "MATCH_UPDATE"
+STARTED = "startes"
 
 SECONDS_PER_DAY = 24 * 60 * 60
 
@@ -33,170 +36,126 @@ SECONDS_PER_DAY = 24 * 60 * 60
 class SamsUtils:
     @staticmethod
     def is_overview(data: dict) -> bool:
-        return "matchDays" in data
+        return MATCHDAYS in data
 
     @staticmethod
     def is_match(data: dict) -> bool:
-        try:
-            if data[TYPE] == TYPE_MATCH:
-                return True
-        except KeyError as e:
-            _LOGGER.debug("is_match - cannot extract type %s", e)
-        return False
+        return data[TYPE] == TYPE_MATCH
 
     @staticmethod
     def is_my_match(data: dict, match: dict) -> bool:
-        try:
-            if data[TYPE] == TYPE_MATCH:
-                if data[PAYLOAD][MATCH_UUID] == match[ID]:
-                    return True
-        except KeyError as e:
-            _LOGGER.debug("is_my_match - cannot extract type %s", e)
+        if SamsUtils.is_match(data):
+            return data[PAYLOAD][MATCH_UUID] == match[ID]
         return False
 
     @staticmethod
     def get_leaguelist(data: dict, gender=None) -> list[dict[str, str]]:
         leagues: list[dict[str, str]] = []
-        try:
-            if SamsUtils.is_overview(data):
-                allseries = data[MATCHSERIES]
-                for series_id in allseries:
-                    series = allseries.get(series_id)
-                    if gender:
-                        if series[GENDER] == gender and series[CLASS] == CLASS_LEAGUE:
-                            leagues.append({NAME: series[NAME], ID: series_id})
-                    elif series[CLASS] == CLASS_LEAGUE:
-                        leagues.append({NAME: series[NAME], ID: series_id})
-        except KeyError as e:
-            _LOGGER.debug("get_leaguelist - cannot extract leagues %s", e)
-            leagues = []
-
+        if SamsUtils.is_overview(data):
+            if gender:
+                leagues = [
+                    {NAME: series[NAME], ID: series_id}
+                    for series_id, series in data[MATCHSERIES].items()
+                    if gender
+                    and series[GENDER] == gender
+                    and series[CLASS] == CLASS_LEAGUE
+                ]
+            else:
+                leagues = [
+                    {NAME: series[NAME], ID: series_id}
+                    for series_id, series in data[MATCHSERIES].items()
+                    if series[CLASS] == CLASS_LEAGUE
+                ]
         return leagues
 
     @staticmethod
-    def get_league(data, league_id):
-        try:
-            if SamsUtils.is_overview(data):
-                allseries = data[MATCHSERIES]
-                series = allseries.get(league_id)
-                return series
-        except KeyError:
-            _LOGGER.debug("get_league - cannot extract league %s", league_id)
+    def get_league_by_id(data: dict, league_id: str) -> dict:
+        if SamsUtils.is_overview(data):
+            return data[MATCHSERIES][league_id]
+        return {}
 
     @staticmethod
-    def get_teamlist(data, league_id) -> dict[str, str]:
+    def get_teamlist(data: dict, league_id: str) -> dict[str, str]:
         teams: dict[str, str] = {}
-        try:
-            series = SamsUtils.get_league(data, league_id)
-            for team in series[TEAMS]:
-                teams[team[NAME]] = team[ID]
-        except KeyError as e:
-            _LOGGER.debug("get_teamlist - cannot extract teams", e)
-            teams = {}
+        series = SamsUtils.get_league_by_id(data, league_id)
+        for team in series[TEAMS]:
+            teams[team[NAME]] = team[ID]
         return teams
 
     @staticmethod
-    def get_league_data(data, league_id, field):
-        try:
-            series = SamsUtils.get_league(data, league_id)
-            return series[field]
-        except KeyError:
-            _LOGGER.debug("get_league_data - cannot extract field, %s", field)
+    def get_league_data(data: dict, league_id: str, field):
+        series = SamsUtils.get_league_by_id(data, league_id)
+        return series[field]
 
     @staticmethod
-    def get_uuids(data, name, league):
+    def get_uuids_by_name(data: dict, name: str, league: str):
         uuid = []
-        try:
-            if SamsUtils.is_overview(data):
-                allseries = data[MATCHSERIES]
-                for series_id in allseries:
-                    series = allseries.get(series_id)
-                    if series[NAME] == league:
-                        for team in series[TEAMS]:
-                            if team[NAME] == name:
-                                uuid.append(team[ID])
-        except KeyError as e:
-            _LOGGER.debug("get_uuid - cannot extract uuid", e)
+        if SamsUtils.is_overview(data):
+            for series_id in data[MATCHSERIES]:
+                series = data[MATCHSERIES][series_id]
+                if series[NAME] == league:
+                    for team in series[TEAMS]:
+                        if team[NAME] == name:
+                            uuid.append(team[ID])
         return uuid
 
     @staticmethod
-    def get_team(data, team_id):
-        try:
-            if SamsUtils.is_overview(data):
-                allseries = data[MATCHSERIES]
-                for series_id in allseries:
-                    series = allseries.get(series_id)
-                    for team in series[TEAMS]:
-                        if team[ID] == team_id:
-                            return team, series
-        except KeyError:
-            _LOGGER.debug("get_team - cannot extract team, %s", team_id)
+    def get_team_by_id(data: dict, team_id: str):
+        if SamsUtils.is_overview(data):
+            for series_id in data[MATCHSERIES]:
+                series = data[MATCHSERIES][series_id]
+                for team in series[TEAMS]:
+                    if team[ID] == team_id:
+                        return team, series
+        return None, None
 
     @staticmethod
     def get_match_data(data):
-        try:
-            return data[PAYLOAD]
-        except KeyError:
-            _LOGGER.debug("get_match_data - cannot extract payload")
-        return None
+        return data[PAYLOAD]
 
     @staticmethod
-    def get_matches(data, team_id):
+    def get_matches(data: dict, team_id):
         matches = []
-        try:
-            if SamsUtils.is_overview(data):
-                matchdays = data[MATCHDAYS]
-                for matchday in matchdays:
-                    for match in matchday[MATCHES]:
-                        if team_id in (match["team1"], match["team2"]):
-                            matches.append(match)
-        except KeyError:
-            _LOGGER.debug("get_team - cannot extract team, %s", team_id)
+        if SamsUtils.is_overview(data):
+            matchdays = data[MATCHDAYS]
+            for matchday in matchdays:
+                for match in matchday[MATCHES]:
+                    if team_id in (match[TEAM + "1"], match[TEAM + "2"]):
+                        matches.append(match)
         return matches
 
     @staticmethod
-    def get_match_state(data, match_id: str):
-        try:
-            if SamsUtils.is_overview(data):
-                if match_id in data[MATCHSTATES]:
-                    return data[MATCHSTATES][match_id]
-        except KeyError:
-            _LOGGER.debug("get_team - cannot extract team, %s", match_id)
-        return
+    def get_match_state(data: dict, match_id: str):
+        if SamsUtils.is_overview(data):
+            if match_id in data[MATCHSTATES]:
+                return data[MATCHSTATES][match_id]
 
     @staticmethod
     def state_from_match_state(match_state):
         state = STATES_NOT_FOUND
-        try:
-            if match_state:
-                if match_state["finished"]:
-                    state = STATES_POST
-                else:
-                    if match_state["started"]:
-                        state = STATES_IN
-                    else:
-                        state = STATES_PRE
+        if match_state:
+            if match_state[FINISHED]:
+                state = STATES_POST
             else:
-                state = STATES_PRE
-        except KeyError:
-            _LOGGER.debug("state_from_match - cannot extract state")
+                if match_state[STARTED]:
+                    state = STATES_IN
+                else:
+                    state = STATES_PRE
+        else:
+            state = STATES_PRE
         return state
 
-    def state_from_match(data, match):
-        state = STATES_NOT_FOUND
-        try:
-            match_state = SamsUtils.get_match_state(data, match[ID])
-            return SamsUtils.state_from_match_state(match_state)
-        except KeyError:
-            _LOGGER.debug("state_from_match - cannot extract state")
-        return state
+    @staticmethod
+    def state_from_match(data: dict, match: dict):
+        match_state = SamsUtils.get_match_state(data, match[ID])
+        return SamsUtils.state_from_match_state(match_state)
 
     @staticmethod
     def date_from_match(match) -> datetime:
-        return dt_util.as_local(dt_util.utc_from_timestamp(float(match["date"]) / 1000))
+        return dt_util.as_local(dt_util.utc_from_timestamp(float(match[DATE]) / 1000))
 
     @staticmethod
-    def select_match(data, matches: list):
+    def select_match(data: dict, matches: list):
         # assumes matches are sorted by date
         for match in matches:
             state = SamsUtils.state_from_match(data, match)
@@ -296,9 +255,9 @@ class SamsUtils:
                 return rank
 
     @staticmethod
-    def fill_team_attributes(attrs, data, team, state):
+    def fill_team_attributes(attrs, data: dict, team, state):
         try:
-            _, league = SamsUtils.get_team(data, team[ID])
+            _, league = SamsUtils.get_team_by_id(data, team[ID])
             rank_team = SamsUtils._get_ranking(league, team[ID])
             if rank_team:
                 attrs[
@@ -327,7 +286,7 @@ class SamsUtils:
         return attrs
 
     @staticmethod
-    def fill_match_attributes(attrs, data, match, team, lang):
+    def fill_match_attributes(attrs, data: dict, match, team, lang):
         try:
             match_id = match[ID]
             attrs["match_id"] = match_id
@@ -340,13 +299,13 @@ class SamsUtils:
             if match["team1"] == team[ID]:
                 attrs["team_homeaway"] = "home"
                 attrs["opponent_homeaway"] = "away"
-                opponent, league = SamsUtils.get_team(data, match["team2"])
+                opponent, league = SamsUtils.get_team_by_id(data, match["team2"])
                 team_num = "team1"
                 opponent_num = "team2"
             else:
                 attrs["team_homeaway"] = "away"
                 attrs["opponent_homeaway"] = "home"
-                opponent, league = SamsUtils.get_team(data, match["team1"])
+                opponent, league = SamsUtils.get_team_by_id(data, match["team1"])
                 team_num = "team2"
                 opponent_num = "team1"
 
@@ -362,7 +321,7 @@ class SamsUtils:
 
             attrs["event_name"] = None
             date = SamsUtils.date_from_match(match)
-            attrs["date"] = date
+            attrs[DATE] = date
             attrs["kickoff_in"] = arrow.get(date).humanize(locale=lang)
             attrs["venue"] = None
             attrs["location"] = None
@@ -401,7 +360,7 @@ class SamsUtils:
         return attrs
 
     @staticmethod
-    def update_match_attributes(attrs, data, match, team_uuid):
+    def update_match_attributes(attrs, data: dict):
         match_state = data
         state = SamsUtils.state_from_match_state(match_state)
 

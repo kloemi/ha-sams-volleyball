@@ -62,7 +62,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 class SamsTeamTracker(CoordinatorEntity):
-    """Representation of a Sensor to provide team tracker compatible data."""
+    """Representation of a sensor to provide team tracker compatible data."""
 
     def __init__(
         self,
@@ -106,21 +106,16 @@ class SamsTeamTracker(CoordinatorEntity):
             lang, _ = locale.getlocale()
             self._lang = lang or "en_US"
 
-    def _update_match(self, data):
-        if self._match and SamsUtils.is_my_match(data, self._match):
-            self._match_data = SamsUtils.get_match_data(data)
-            _LOGGER.debug("Update match data for sensor %s", self._name)
-
     def _update_overview(self, data):
         _LOGGER.debug("Update team data for sensor %s", self._name)
         self._ticker_data = data
-        uuid_list = SamsUtils.get_uuids(data, self._name, self._league_name)
+        uuid_list = SamsUtils.get_uuids_by_name(data, self._name, self._league_name)
         if len(uuid_list) == 0:
             _LOGGER.warning(
                 f"No team data found for {self._name} - {self._league_name}"
             )
             return
-        self._team, _ = SamsUtils.get_team(data, uuid_list[0])
+        self._team, _ = SamsUtils.get_team_by_id(data, uuid_list[0])
         matches = []
         idx = 0
         while len(matches) == 0 and idx < len(uuid_list):
@@ -128,7 +123,7 @@ class SamsTeamTracker(CoordinatorEntity):
             idx = idx + 1
         if len(matches) > 0:
             self._team_uuid = uuid_list[idx - 1]
-            self._team, _ = SamsUtils.get_team(data, self._team_uuid)
+            self._team, _ = SamsUtils.get_team_by_id(data, self._team_uuid)
             self._match = SamsUtils.select_match(data, matches)
             self._state = SamsUtils.state_from_match(data, self._match)
         else:
@@ -159,7 +154,8 @@ class SamsTeamTracker(CoordinatorEntity):
             if SamsUtils.is_overview(data):
                 self._update_overview(data)
             elif SamsUtils.is_match(data):
-                self._update_match(data)
+                if self._match and SamsUtils.is_my_match(data, self._match):
+                    self._match_data = SamsUtils.get_match_data(data)
         super()._handle_coordinator_update()
 
     @property
@@ -199,7 +195,7 @@ class SamsTeamTracker(CoordinatorEntity):
                     )
             if self._match_data:
                 self._attr = SamsUtils.update_match_attributes(
-                    self._attr, self._match_data, self._match, self._team
+                    self._attr, self._match_data
                 )
         except Exception as e:
             _LOGGER.warning("Fill attributes - exception %s", e)
