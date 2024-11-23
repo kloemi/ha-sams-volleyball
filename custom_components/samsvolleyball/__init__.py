@@ -121,7 +121,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
                 await self.update_data(data)
                 if self.receive_timout == TIMEOUT[NO_GAME]:
                     _LOGGER.info(f"{self.name} - no game active - close socket.")
-                    await self._disconnect()
+                    await self.disconnect()
         else:
             _LOGGER.info(
                 "%s - received unexpected message: %s ", self.name, str(message)[1:500]
@@ -161,9 +161,9 @@ class SamsDataCoordinator(DataUpdateCoordinator):
             await self._on_open()
         except ClientError as exc:  # pylint: disable=broad-except
             _LOGGER.warning("Error during processing new message: %s", exc)
-            self._disconnect()
+            self.disconnect()
 
-    async def _disconnect(self):
+    async def disconnect(self):
         """Close web socket connection"""
         if self.ws_task is not None:
             self.ws_task.cancel()
@@ -180,7 +180,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
         if diff > self.receive_timout:
             self.last_receive_ts = ts  # prevent rush of reconnects
             _LOGGER.info("%s Sams Websocket reset - receive data timeout", self.name)
-            await self._disconnect()
+            await self.disconnect()
             await self.connect()
 
     async def update_timeout(self):
@@ -192,7 +192,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
                 match_active = active
         timeout = TIMEOUT[match_active]
         if timeout < self.receive_timout:
-            await self._disconnect()
+            await self.disconnect()
             await self.connect()
         self.receive_timout = timeout
 

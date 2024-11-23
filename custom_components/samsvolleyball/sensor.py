@@ -115,18 +115,18 @@ class SamsTeamTracker(CoordinatorEntity):
                 f"No team data found for {self._name} - {self._league_name}"
             )
             return
-        self._team, _ = SamsUtils.get_team_by_id(data, uuid_list[0])
         matches = []
         idx = 0
         while len(matches) == 0 and idx < len(uuid_list):
             matches = SamsUtils.get_matches(data, uuid_list[idx])
-            idx = idx + 1
+            idx += 1
         if len(matches) > 0:
             self._team_uuid = uuid_list[idx - 1]
             self._team, _ = SamsUtils.get_team_by_id(data, self._team_uuid)
             self._match = SamsUtils.select_match(data, matches)
             self._state = SamsUtils.state_from_match(data, self._match)
         else:
+            self._team, _ = SamsUtils.get_team_by_id(data, uuid_list[0])
             self._state = STATES_NOT_FOUND
             self._match = None
 

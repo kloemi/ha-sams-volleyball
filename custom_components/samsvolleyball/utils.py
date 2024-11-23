@@ -28,7 +28,7 @@ TEAM = "team"
 TEAMS = "teams"
 TYPE = "type"
 TYPE_MATCH = "MATCH_UPDATE"
-STARTED = "startes"
+STARTED = "started"
 
 SECONDS_PER_DAY = 24 * 60 * 60
 
@@ -131,7 +131,7 @@ class SamsUtils:
                 return data[MATCHSTATES][match_id]
 
     @staticmethod
-    def state_from_match_state(match_state):
+    def state_from_match_state(match_state: dict):
         state = STATES_NOT_FOUND
         if match_state:
             if match_state[FINISHED]:
@@ -204,7 +204,9 @@ class SamsUtils:
         return set_string
 
     @staticmethod
-    def fill_match_attrs(attrs, match_state, state, team_num, opponent_num):
+    def fill_match_attrs(
+        attrs: dict, match_state: dict, state: str, team_num: str, opponent_num: str
+    ):
         attrs["team_winner"] = None
         attrs["opponent_winner"] = None
 
@@ -249,13 +251,13 @@ class SamsUtils:
         return attrs
 
     @staticmethod
-    def _get_ranking(league, team_id):
+    def _get_ranking(league: dict, team_id: str):
         for rank in league["rankings"]["fullRankings"]:
-            if rank["team"][ID] == team_id:
+            if rank[TEAM][ID] == team_id:
                 return rank
 
     @staticmethod
-    def fill_team_attributes(attrs, data: dict, team, state):
+    def fill_team_attributes(attrs: dict, data: dict, team: dict, state: str):
         try:
             _, league = SamsUtils.get_team_by_id(data, team[ID])
             rank_team = SamsUtils._get_ranking(league, team[ID])
@@ -267,7 +269,7 @@ class SamsUtils:
             attrs["league"] = league[NAME]
             attrs["last_update"] = dt_util.as_local(dt_util.now())
 
-            attrs["team_name"] = team["name"]
+            attrs["team_name"] = team[NAME]
             if STATES_NOT_FOUND == state:
                 attrs["team_abbr"] = team[NAME]
             else:
@@ -286,14 +288,10 @@ class SamsUtils:
         return attrs
 
     @staticmethod
-    def fill_match_attributes(attrs, data: dict, match, team, lang):
+    def fill_match_attributes(attrs: dict, data: dict, match: dict, team: dict, lang):
         try:
-            match_id = match[ID]
-            attrs["match_id"] = match_id
+            attrs["match_id"] = match[ID]
             state = SamsUtils.state_from_match(data, match)
-
-            league = None
-            rank_opponent = None
             attrs = SamsUtils.fill_team_attributes(attrs, data, team, state)
 
             if match["team1"] == team[ID]:
@@ -338,11 +336,10 @@ class SamsUtils:
 
             attrs["quarter"] = None
 
-            state = SamsUtils.state_from_match(data, match)
-            match_state = SamsUtils.get_match_state(data, match_id)
+            match_state = SamsUtils.get_match_state(data, match[ID])
             if match_state:
                 attrs = SamsUtils.fill_match_attrs(
-                    attrs, match_state, state, team_num, opponent_num
+                    attrs, match_state, match_state, team_num, opponent_num
                 )
             else:
                 attrs["clock"] = ""
@@ -360,7 +357,7 @@ class SamsUtils:
         return attrs
 
     @staticmethod
-    def update_match_attributes(attrs, data: dict):
+    def update_match_attributes(attrs: dict, data: dict):
         match_state = data
         state = SamsUtils.state_from_match_state(match_state)
 
