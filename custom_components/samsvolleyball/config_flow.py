@@ -68,7 +68,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]):
     coordinator = SamsDataCoordinator(hass, session, "ConfigValidate", url, get_url)
 
     try:
-        data = await coordinator.get_initial_data()
+        data = await coordinator.get_full_data()
     except Exception as exc:
         raise CannotConnect from exc
     if not data:

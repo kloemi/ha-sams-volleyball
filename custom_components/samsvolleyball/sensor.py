@@ -10,7 +10,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ATTRIBUTION
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 from homeassistant.util import slugify
@@ -32,12 +31,12 @@ from .const import (
     NO_GAME,
     STATES_IN,
     STATES_NOT_FOUND,
-    TIMEOUT_PERIOD_CHECK,
     VOLLEYBALL,
 )
 from .utils import SamsUtils
 
 _LOGGER = logging.getLogger(__name__)
+SCAN_INTERVAL = timedelta(seconds=5)
 
 
 async def async_setup_entry(
@@ -54,7 +53,7 @@ async def async_setup_entry(
     ]
 
     # Add sensor entities.
-    async_add_entities(entities, True)
+    async_add_entities(entities, update_before_add=False)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -92,19 +91,14 @@ class SamsTeamTracker(CoordinatorEntity):
     async def async_added_to_hass(self) -> None:
         """Subscribe timer events."""
         await super().async_added_to_hass()
-        self.async_on_remove(
-            async_track_time_interval(
-                self.hass,
-                self._coordinator.check_timeout,
-                timedelta(seconds=TIMEOUT_PERIOD_CHECK),
-            )
-        )
-
         try:
             self._lang = self.hass.config.language
         except Exception:  # pylint: disable=broad-except
             lang, _ = locale.getlocale()
             self._lang = lang or "en_US"
+        _LOGGER.debug(
+            f"Added entity {self.name} with coordinator {self._coordinator.name} listener {len(self._coordinator._listeners)}"
+        )
 
     def _update_overview(self, data):
         _LOGGER.debug("Update team data for sensor %s", self._name)
@@ -132,17 +126,13 @@ class SamsTeamTracker(CoordinatorEntity):
 
     def get_active_state(self):
         # check if we are nearby (2 hours before / 3 hours behind)
-        if not self._ticker_data:
-            return NEAR_GAME
-
-        if self._state != STATES_NOT_FOUND:
-            if self._state == STATES_IN:
-                return IN_GAME
-            if self._match and "date" in self._attr:
-                date = self._attr["date"]
-                duration = (dt_util.now() - date).total_seconds()
-                if (-2 * 60 * 60) < duration < (3 * 60 * 60):
-                    return NEAR_GAME
+        if self._state == STATES_IN:
+            return IN_GAME
+        elif self._match and "date" in self._attr:
+            date = self._attr["date"]
+            duration = (dt_util.now() - date).total_seconds()
+            if (-2 * 60 * 60) < duration < (3 * 60 * 60):
+                return NEAR_GAME
         return NO_GAME
 
     @callback
@@ -211,3 +201,7 @@ class SamsTeamTracker(CoordinatorEntity):
     def icon(self) -> str:
         """Return the icon to use in the frontend, if any."""
         return DEFAULT_ICON
+
+    @property
+    def should_poll(self) -> bool:
+        return True

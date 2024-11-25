@@ -24,6 +24,7 @@ from .const import (
     VERSION,
 )
 
+UPDATE_FULL_INTERVAL = 5 * 60  # 5 min.
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -80,7 +81,8 @@ class SamsDataCoordinator(DataUpdateCoordinator):
         self.get_url = get_url
         self.ws = None
         self.ws_task = None
-        self.last_receive_ts = dt_util.as_timestamp(dt_util.utcnow())
+        self.last_get_ts = dt_util.as_timestamp(dt_util.start_of_local_day())
+        self.last_ws_receive_ts = dt_util.as_timestamp(dt_util.utcnow())
         self.connected = False
         self.loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
         self.receive_timout = TIMEOUT[NO_GAME]
@@ -93,13 +95,28 @@ class SamsDataCoordinator(DataUpdateCoordinator):
             "Accept-Encoding": "gzip, deflate, br, zstd",
             "Accept-Language": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7",
         }
-
+        _LOGGER.debug("Init coordinator for %s", self.name)
         super().__init__(hass, _LOGGER, name=self.name)
 
     async def _async_update_data(self):
-        if not self.ws or not self.connected:
-            _LOGGER.debug("Connect to %s", self.websocket_url)
-            await self.connect()
+        now = dt_util.utcnow()
+        ts = dt_util.as_timestamp(now)
+        data = None
+        if (ts - self.last_get_ts) > UPDATE_FULL_INTERVAL:
+            data = await self.get_full_data()
+            self.last_get_ts = ts
+
+        if await self.game_active():
+            if not self.ws or not self.connected:
+                _LOGGER.debug("Connect to %s", self.websocket_url)
+                await self.connect()
+                self.last_ws_receive_ts = ts
+            if ts - self.last_ws_receive_ts > self.receive_timout:
+                _LOGGER.debug("Timeout on ws %s - reconnect", self.name)
+                await self.disconnect()
+                await self.connect()
+                self.last_ws_receive_ts = ts
+        return data
 
     async def _on_close(self):
         _LOGGER.debug(f"Connection closed - {self.name}")
@@ -109,16 +126,13 @@ class SamsDataCoordinator(DataUpdateCoordinator):
         _LOGGER.info(f"Connection opened - {self.name}")
         self.connected = True
 
-    async def update_data(self, data):
-        self.async_set_updated_data(data)
-        self.last_receive_ts = dt_util.as_timestamp(dt_util.utcnow())
-
     async def _on_message(self, message: WSMessage):
         if message.type == WSMsgType.TEXT:
             data = json.loads(message.data)
             _LOGGER.debug("Received data: %s ", str(message)[1:500])
             if data:
-                await self.update_data(data)
+                self.async_set_updated_data(data)
+                self.last_ws_receive_ts = dt_util.as_timestamp(dt_util.utcnow())
                 if self.receive_timout == TIMEOUT[NO_GAME]:
                     _LOGGER.info(f"{self.name} - no game active - close socket.")
                     await self.disconnect()
@@ -126,6 +140,12 @@ class SamsDataCoordinator(DataUpdateCoordinator):
             _LOGGER.info(
                 "%s - received unexpected message: %s ", self.name, str(message)[1:500]
             )
+
+    async def get_full_data(self) -> dict:
+        resp = await self.session.get(self.get_url, raise_for_status=True)
+        _LOGGER.info("%s received full ticker json", self.name)
+        data = await resp.json()
+        return data
 
     async def _process_messages(self):
         try:
@@ -142,15 +162,8 @@ class SamsDataCoordinator(DataUpdateCoordinator):
                 "Error during processing new message: %s", exc.with_traceback()
             )
 
-    async def get_initial_data(self):
-        resp = await self.session.get(self.get_url, raise_for_status=True)
-        data = await resp.json()
-        await self.update_data(data)
-        return data
-
     async def connect(self):
         try:
-            await self.get_initial_data()
             self.ws = await self.session.ws_connect(
                 self.websocket_url,
                 autoclose=False,
@@ -172,29 +185,9 @@ class SamsDataCoordinator(DataUpdateCoordinator):
             await self.ws.close()
             self.ws = None
 
-    async def check_timeout(self, now):
-        # check last received data time
-        await self.update_timeout()
-        ts = dt_util.as_timestamp(now)
-        diff = ts - self.last_receive_ts
-        if diff > self.receive_timout:
-            self.last_receive_ts = ts  # prevent rush of reconnects
-            _LOGGER.info("%s Sams Websocket reset - receive data timeout", self.name)
-            await self.disconnect()
-            await self.connect()
-
-    async def update_timeout(self):
-        match_active = NO_GAME
+    async def game_active(self) -> bool:
         for _, active_cb in list(self._listeners.values()):
             # call function get_active_state
-            active = active_cb()
-            if active > match_active:
-                match_active = active
-        timeout = TIMEOUT[match_active]
-        if timeout < self.receive_timout:
-            await self.disconnect()
-            await self.connect()
-        self.receive_timout = timeout
-
-    def hasListener(self) -> bool:
-        return len(self._listeners) > 0
+            if active_cb() > 0:
+                return True
+        return False
