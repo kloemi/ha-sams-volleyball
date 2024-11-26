@@ -57,7 +57,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         coordinator = hass.data[DOMAIN][entry.data[CONF_REGION]]
-        if not coordinator.hasListener():
+        if not coordinator.has_listener():
             coordinator = hass.data[DOMAIN].pop(entry.data[CONF_REGION])
             await coordinator.disconnect()
             _LOGGER.info(
@@ -191,3 +191,6 @@ class SamsDataCoordinator(DataUpdateCoordinator):
             if active_cb() > 0:
                 return True
         return False
+
+    def has_listener(self) -> bool:
+        return len(self._listeners) > 0
