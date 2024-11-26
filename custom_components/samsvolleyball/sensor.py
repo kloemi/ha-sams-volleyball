@@ -87,6 +87,7 @@ class SamsTeamTracker(CoordinatorEntity):
         self._lang: str = ""
         self._ticker_data = None
         self._match_data = None
+        self._changed = False
 
     async def async_added_to_hass(self) -> None:
         """Subscribe timer events."""
@@ -103,6 +104,7 @@ class SamsTeamTracker(CoordinatorEntity):
     def _update_overview(self, data):
         _LOGGER.debug("Update team data for sensor %s", self._name)
         self._ticker_data = data
+        self._changed = True
         uuid_list = SamsUtils.get_uuids_by_name(data, self._name, self._league_name)
         if len(uuid_list) == 0:
             _LOGGER.warning(
@@ -146,6 +148,7 @@ class SamsTeamTracker(CoordinatorEntity):
             elif SamsUtils.is_match(data):
                 if self._match and SamsUtils.is_my_match(data, self._match):
                     self._match_data = SamsUtils.get_match_data(data)
+                    self._changed = True
         super()._handle_coordinator_update()
 
     @property
@@ -165,6 +168,8 @@ class SamsTeamTracker(CoordinatorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the state message."""
+        if not self._changed:
+            return self._attr
 
         self._attr[ATTR_ATTRIBUTION] = ATTRIBUTION
         self._attr["sport"] = VOLLEYBALL
@@ -189,7 +194,7 @@ class SamsTeamTracker(CoordinatorEntity):
                 )
         except Exception as e:
             _LOGGER.warning("Fill attributes - exception %s", e)
-
+        self._changed = False
         return self._attr
 
     @property
