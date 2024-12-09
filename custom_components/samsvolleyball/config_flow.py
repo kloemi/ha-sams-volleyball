@@ -1,4 +1,5 @@
 """Config flow for samsvolleyball integration."""
+
 from __future__ import annotations
 
 import logging
@@ -75,7 +76,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]):
         raise InvalidData
 
     leagues = SamsUtils.get_leaguelist(data)
-    if 0 == len(leagues):
+    if len(leagues) == 0:
         raise InvalidData
 
     # Return info that you want to store in the config entry.
@@ -148,17 +149,17 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self.cfg_data[CONF_LEAGUE_NAME] = SamsUtils.get_league_data(
                 self.data, league_id, "name"
             )
-            if 0 == len(self.teams):
+            if len(self.teams) == 0:
                 errors["base"] = "no_teams"
             else:
                 self.cfg_data[CONF_LEAGUE] = user_input[CONF_LEAGUE]
                 return await self.async_step_team()
 
         leagues_filter = SamsUtils.get_leaguelist(self.data, self.cfg_data[CONF_GENDER])
-        league_select = []
-        for league in leagues_filter:
-            league_select.append({"label": league["name"], "value": league["id"]})
-
+        league_select = [
+            {"label": league["name"], "value": league["id"]}
+            for league in leagues_filter
+        ]
         step_league_schema = vol.Schema(
             {
                 vol.Required(CONF_LEAGUE): selector.SelectSelector(

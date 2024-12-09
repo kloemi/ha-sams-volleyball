@@ -129,6 +129,7 @@ class SamsUtils:
         if SamsUtils.is_overview(data):
             if match_id in data[MATCHSTATES]:
                 return data[MATCHSTATES][match_id]
+        return None
 
     @staticmethod
     def state_from_match_state(match_state: dict):
@@ -136,11 +137,10 @@ class SamsUtils:
         if match_state:
             if match_state[FINISHED]:
                 state = STATES_POST
+            elif match_state[STARTED]:
+                state = STATES_IN
             else:
-                if match_state[STARTED]:
-                    state = STATES_IN
-                else:
-                    state = STATES_PRE
+                state = STATES_PRE
         else:
             state = STATES_PRE
         return state
@@ -160,12 +160,12 @@ class SamsUtils:
         for match in matches:
             state = SamsUtils.state_from_match(data, match)
             # prefer active matches
-            if STATES_IN == state:
+            if state == STATES_IN:
                 return match
 
         for match in matches:
             state = SamsUtils.state_from_match(data, match)
-            if STATES_POST == state:
+            if state == STATES_POST:
                 duration = (
                     dt_util.now() - SamsUtils.date_from_match(match)
                 ).total_seconds()
@@ -177,7 +177,7 @@ class SamsUtils:
 
         for match in matches:
             state = SamsUtils.state_from_match(data, match)
-            if STATES_PRE == state:
+            if state == STATES_PRE:
                 # select the next
                 time_to_start = (
                     SamsUtils.date_from_match(match) - dt_util.now()
@@ -225,7 +225,7 @@ class SamsUtils:
                 ]
             )
 
-        if STATES_POST == state:
+        if state == STATES_POST:
             attrs["team_score"] = match_state["setPoints"][team_num]
             attrs["opponent_score"] = match_state["setPoints"][opponent_num]
 
@@ -237,7 +237,7 @@ class SamsUtils:
                 match_state, team_num, opponent_num, 0
             )
 
-        if STATES_IN == state:
+        if state == STATES_IN:
             attrs["team_score"] = match_state["matchSets"][-1]["setScore"][team_num]
             attrs["opponent_score"] = match_state["matchSets"][-1]["setScore"][
                 opponent_num
@@ -255,6 +255,7 @@ class SamsUtils:
         for rank in league["rankings"]["fullRankings"]:
             if rank[TEAM][ID] == team_id:
                 return rank
+        return None
 
     @staticmethod
     def fill_team_attributes(attrs: dict, data: dict, team: dict, state: str):
@@ -270,7 +271,7 @@ class SamsUtils:
             attrs["last_update"] = dt_util.as_local(dt_util.now())
 
             attrs["team_name"] = team[NAME]
-            if STATES_NOT_FOUND == state:
+            if state == STATES_NOT_FOUND:
                 attrs["team_abbr"] = team[NAME]
             else:
                 attrs["team_abbr"] = (

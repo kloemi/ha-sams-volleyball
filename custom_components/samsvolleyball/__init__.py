@@ -1,4 +1,5 @@
 """The sams-volleyball integration."""
+
 from __future__ import annotations
 
 import asyncio
@@ -192,5 +193,5 @@ class SamsDataCoordinator(DataUpdateCoordinator):
                 return True
         return False
 
-    def has_listener(self) -> bool:
-        return len(self._listeners) > 0
+    def has_listener(self) -> tuple:
+        return len(self._listeners) > 0, len(self._listeners)

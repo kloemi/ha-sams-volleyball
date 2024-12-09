@@ -1,4 +1,5 @@
 """The sams volleyball sensor platform."""
+
 from __future__ import annotations
 
 import locale
@@ -97,8 +98,12 @@ class SamsTeamTracker(CoordinatorEntity):
         except Exception:  # pylint: disable=broad-except
             lang, _ = locale.getlocale()
             self._lang = lang or "en_US"
+        _, num_listener = self._coordinator.has_listener()
         _LOGGER.debug(
-            f"Added entity {self.name} with coordinator {self._coordinator.name} listener {len(self._coordinator._listeners)}"
+            "Added entity %s with coordinator %s listener %d",
+            self.name,
+            self._coordinator.name,
+            num_listener,
         )
 
     def _update_overview(self, data):
@@ -108,7 +113,7 @@ class SamsTeamTracker(CoordinatorEntity):
         uuid_list = SamsUtils.get_uuids_by_name(data, self._name, self._league_name)
         if len(uuid_list) == 0:
             _LOGGER.warning(
-                f"No team data found for {self._name} - {self._league_name}"
+                "No team data found for %s - %s", self._name, self._league_name
             )
             return
         matches = []
@@ -130,7 +135,7 @@ class SamsTeamTracker(CoordinatorEntity):
         # check if we are nearby (2 hours before / 3 hours behind)
         if self._state == STATES_IN:
             return IN_GAME
-        elif self._match and "date" in self._attr:
+        if self._match and "date" in self._attr:
             date = self._attr["date"]
             duration = (dt_util.now() - date).total_seconds()
             if (-2 * 60 * 60) < duration < (3 * 60 * 60):
@@ -183,11 +188,10 @@ class SamsTeamTracker(CoordinatorEntity):
                 self._attr = SamsUtils.fill_match_attributes(
                     self._attr, self._ticker_data, self._match, self._team, self._lang
                 )
-            else:
-                if self._team:
-                    self._attr = SamsUtils.fill_team_attributes(
-                        self._attr, self._ticker_data, self._team, self._state
-                    )
+            elif self._team:
+                self._attr = SamsUtils.fill_team_attributes(
+                    self._attr, self._ticker_data, self._team, self._state
+                )
             if self._match_data:
                 self._attr = SamsUtils.update_match_attributes(
                     self._attr, self._match_data
