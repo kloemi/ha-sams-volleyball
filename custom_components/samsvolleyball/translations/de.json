@@ -1,66 +1,66 @@
 {
-    "config": {
-        "abort": {
-            "already_configured": "Device is already configured"
-        },
-        "error": {
-            "cannot_connect": "Verbindung zum Server fehlgeschlagen",
-            "invalid_data": "Ungültige Daten empfangen",
-            "unknown": "Unbekannter Fehler",
-            "no_teams": "Keine Mannschaft in ausgewählter Liga gefunden"
-        },
-        "step": {
-            "user": {
-                "data": {
-                    "name": "Sensor Name",
-                    "host": "Host",
-                    "region": "Verband"
-                }
-            },
-            "gender": {
-                "data": {
-                    "gender": "Geschlecht"
-                }
-            },
-            "league": {
-                "data": {
-                    "league": "Liga"
-                }
-            },
-            "team": {
-                "data": {
-                    "team": "Mannschaft"
-                }
-            }
-        }
+  "config": {
+    "abort": {
+      "already_configured": "Device is already configured"
     },
-    "selector": {
-        "region": {
-            "options": {
-                "baden": "Nordbaden & Südbaden",
-                "bvv": "Brandenburg",
-                "dvv": "DVV - Dritte Liga und RL Nord",
-                "flvb": "Luxemburg",
-                "hvbv": "Hamburg",
-                "hvv": "Hessen",
-                "nwvv": "Nordwestdeutscher Volleyball-Verband",
-                "shvv": "Schleswig-Holstein",
-                "ssvb": "Sachsen",
-                "svv": "Saarland",
-                "tvv": "Thüringen",
-                "vbl": "VBL - 1./2. Bundesliga",
-                "vmv": "Mecklenburg-Vorpommern",
-                "vlw": "Württemberg",
-                "vvb": "Berlin",
-                "vvrp": "Rheinland-Pfalz"
-            }
-        },
-        "gender": {
-            "options": {
-                "female": "Damen",
-                "male": "Herren",
-                "mixed": "Mixed"
-            }
+    "error": {
+      "cannot_connect": "Verbindung zum Server fehlgeschlagen",
+      "invalid_data": "Ungültige Daten empfangen",
+      "unknown": "Unbekannter Fehler",
+      "no_teams": "Keine Mannschaft in ausgewählter Liga gefunden"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "name": "Sensor Name",
+          "host": "Host",
+          "region": "Verband"
         }
+      },
+      "gender": {
+        "data": {
+          "gender": "Geschlecht"
+        }
+      },
+      "league": {
+        "data": {
+          "league": "Liga"
+        }
+      },
+      "team": {
+        "data": {
+          "team": "Mannschaft"
+        }
+      }
     }
+  },
+  "selector": {
+    "region": {
+      "options": {
+        "baden": "Nordbaden & Südbaden",
+        "bvv": "Brandenburg",
+        "dvv": "DVV - Dritte Liga und RL Nord",
+        "flvb": "Luxemburg",
+        "hvbv": "Hamburg",
+        "hvv": "Hessen",
+        "nwvv": "Nordwestdeutscher Volleyball-Verband",
+        "shvv": "Schleswig-Holstein",
+        "ssvb": "Sachsen",
+        "svv": "Saarland",
+        "tvv": "Thüringen",
+        "vbl": "VBL - 1./2. Bundesliga",
+        "vmv": "Mecklenburg-Vorpommern",
+        "vlw": "Württemberg",
+        "vvb": "Berlin",
+        "vvrp": "Rheinland-Pfalz"
+      }
+    },
+    "gender": {
+      "options": {
+        "female": "Damen",
+        "male": "Herren",
+        "mixed": "Mixed"
+      }
+    }
+  }
 }

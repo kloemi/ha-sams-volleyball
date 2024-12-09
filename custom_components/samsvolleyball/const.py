@@ -1,4 +1,5 @@
 """Constants for the samsvolleyball integration."""
+
 from homeassistant.const import CONF_NAME, Platform
 
 # Misc

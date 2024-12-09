@@ -8,6 +8,7 @@ import logging
 import urllib.parse
 
 from aiohttp import ClientError, ClientSession, WSMessage, WSMsgType
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -69,12 +70,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 class SamsDataCoordinator(DataUpdateCoordinator):
-    """Class to manage fetching sams ticker data. It is intantiated once per used region/websocket."""
+    """Class to manage fetching sams ticker data. It is instantiated once per used region/websocket."""
 
     def __init__(
         self, hass: HomeAssistant, session: ClientSession, name, websocket_url, get_url
     ) -> None:
-        """init websocket instance"""
+        """Init websocket instance."""
         self.hass = hass
         self.session = session
         self.name = name
@@ -120,11 +121,11 @@ class SamsDataCoordinator(DataUpdateCoordinator):
         return data
 
     async def _on_close(self):
-        _LOGGER.debug(f"Connection closed - {self.name}")
+        _LOGGER.debug("Connection closed - %s", self.name)
         self.connected = False
 
     async def _on_open(self):
-        _LOGGER.info(f"Connection opened - {self.name}")
+        _LOGGER.info("Connection opened - %s", self.name)
         self.connected = True
 
     async def _on_message(self, message: WSMessage):
@@ -135,7 +136,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
                 self.async_set_updated_data(data)
                 self.last_ws_receive_ts = dt_util.as_timestamp(dt_util.utcnow())
                 if self.receive_timout == TIMEOUT[NO_GAME]:
-                    _LOGGER.info(f"{self.name} - no game active - close socket.")
+                    _LOGGER.info("%s - no game active - close socket", self.name)
                     await self.disconnect()
         else:
             _LOGGER.info(
@@ -145,8 +146,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
     async def get_full_data(self) -> dict:
         resp = await self.session.get(self.get_url, raise_for_status=True)
         _LOGGER.info("%s received full ticker json", self.name)
-        data = await resp.json()
-        return data
+        return await resp.json()
 
     async def _process_messages(self):
         try:
@@ -178,7 +178,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
             self.disconnect()
 
     async def disconnect(self):
-        """Close web socket connection"""
+        """Close web socket connection."""
         if self.ws_task is not None:
             self.ws_task.cancel()
             self.ws_task = None
@@ -186,12 +186,8 @@ class SamsDataCoordinator(DataUpdateCoordinator):
             await self.ws.close()
             self.ws = None
 
-    async def game_active(self) -> bool:
-        for _, active_cb in list(self._listeners.values()):
-            # call function get_active_state
-            if active_cb() > 0:
-                return True
-        return False
+    def game_active(self) -> bool:
+        return any(active_cb() > 0 for _, active_cb in list(self._listeners.values()))
 
     def has_listener(self) -> tuple:
         return len(self._listeners) > 0, len(self._listeners)

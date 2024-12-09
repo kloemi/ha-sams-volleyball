@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import logging
-import urllib.parse
 from typing import Any
+import urllib.parse
 
 import voluptuous as vol
+
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
@@ -121,6 +122,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_gender(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
+        """Handle a config flow for samsvolleyball. Select gender of team."""
         errors: dict[str, str] = {}
         if user_input is not None:
             self.cfg_data[CONF_GENDER] = GENDER_MAP[user_input[CONF_GENDER]]
@@ -142,6 +144,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_league(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
+        """Handle a config flow for samsvolleyball. Select league of team."""
         errors: dict[str, str] = {}
         if user_input is not None:
             league_id = user_input[CONF_LEAGUE]
@@ -174,6 +177,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_team(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
+        """Handle a config flow for samsvolleyball. Select the desired team for your sensor."""
         if user_input is not None:
             self.cfg_data[CONF_TEAM_NAME] = user_input[CONF_TEAM_NAME]
             team_id = self.teams[user_input[CONF_TEAM_NAME]]

@@ -1,10 +1,13 @@
+"""Utilities to evaluate and analyze json data from sams ticker."""
+
 from __future__ import annotations
 
+from datetime import datetime
 import logging
 import sys
-from datetime import datetime
 
 import arrow
+
 from homeassistant.util import dt as dt_util
 
 from .const import STATES_IN, STATES_NOT_FOUND, STATES_POST, STATES_PRE
@@ -263,9 +266,9 @@ class SamsUtils:
             _, league = SamsUtils.get_team_by_id(data, team[ID])
             rank_team = SamsUtils._get_ranking(league, team[ID])
             if rank_team:
-                attrs[
-                    "team_record"
-                ] = f"{rank_team['scoreDetails']['matchesPlayed']} - {rank_team['scoreDetails']['winScore']}"
+                attrs["team_record"] = (
+                    f"{rank_team['scoreDetails']['matchesPlayed']} - {rank_team['scoreDetails']['winScore']}"
+                )
                 attrs["team_rank"] = rank_team["rankingPosition"]
             attrs["league"] = league[NAME]
             attrs["last_update"] = dt_util.as_local(dt_util.now())
@@ -313,9 +316,9 @@ class SamsUtils:
 
             if league and opponent:
                 rank_opponent = SamsUtils._get_ranking(league, opponent[ID])
-                attrs[
-                    "opponent_record"
-                ] = f"{rank_opponent['scoreDetails']['matchesPlayed']} - {rank_opponent['scoreDetails']['winScore']}"
+                attrs["opponent_record"] = (
+                    f"{rank_opponent['scoreDetails']['matchesPlayed']} - {rank_opponent['scoreDetails']['winScore']}"
+                )
                 attrs["opponent_rank"] = rank_opponent["rankingPosition"]
 
             attrs["event_name"] = None
