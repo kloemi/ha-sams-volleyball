@@ -25,6 +25,7 @@ from .const import (
     NO_GAME,
     PLATFORMS,
     TIMEOUT,
+    TIMEOUT_PERIOD_CHECK,
     URL_GET,
     VERSION,
 )
@@ -90,13 +91,15 @@ class SamsDataCoordinator(DataUpdateCoordinator):
         get_url: str,
     ) -> None:
         """Init the data update instance."""
+        ts_now = dt_util.as_timestamp(dt_util.utcnow())
         self.session = session
         self.websocket_url = websocket_url
         self.get_url = get_url
         self.ws = None
         self.ws_task = None
         self.last_get_ts = dt_util.as_timestamp(dt_util.start_of_local_day())
-        self.last_ws_receive_ts = dt_util.as_timestamp(dt_util.utcnow())
+        self.last_ws_receive_ts = ts_now
+        self.last_check_ts = ts_now
         self.connected = False
         self.loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
         self.receive_timout = TIMEOUT[NO_GAME]
@@ -111,7 +114,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
     async def get_full_data(self) -> dict:
         """Get the full data json from SAMS by GET request."""
         resp = await self.session.get(self.get_url, raise_for_status=True)
-        _LOGGER.info("%s received full ticker json", self.name)
+        _LOGGER.debug("%s received full ticker json", self.name)
         return await resp.json()
 
     async def _async_update_data(self):
@@ -139,9 +142,6 @@ class SamsDataCoordinator(DataUpdateCoordinator):
             if data:
                 self.async_set_updated_data(data)
                 self.last_ws_receive_ts = dt_util.as_timestamp(dt_util.utcnow())
-                if self.receive_timout == TIMEOUT[NO_GAME]:
-                    _LOGGER.info("%s - no game active - close socket", self.name)
-                    await self.disconnect()
         else:
             _LOGGER.info(
                 "%s - received unexpected message: %s ", self.name, str(message)[1:500]
@@ -185,20 +185,25 @@ class SamsDataCoordinator(DataUpdateCoordinator):
             await self.ws.close()
             self.ws = None
 
-    async def periodic_work(self):
-        ts = dt_util.as_timestamp(dt_util.utcnow())
-        if self.game_active():
-            if not self.ws or not self.connected:
-                _LOGGER.debug("Connect to %s", self.websocket_url)
-                await self._connect_ws()
-                self.last_ws_receive_ts = ts
-            if ts - self.last_ws_receive_ts > self.receive_timout:
-                _LOGGER.debug("Timeout on ws %s - reconnect", self.name)
-                await self.disconnect()
-                await self._connect_ws()
-                self.last_ws_receive_ts = ts
+    async def periodic_work(self, now):
+        ts = dt_util.as_timestamp(now)
+        if ts - self.last_check_ts > TIMEOUT_PERIOD_CHECK:
+            if self._game_active():
+                if not self.ws or not self.connected:
+                    _LOGGER.info("Connect to %s", self.websocket_url)
+                    await self._connect_ws()
+                    self.last_ws_receive_ts = ts
+                if ts - self.last_ws_receive_ts > self.receive_timout:
+                    _LOGGER.debug("Timeout on ws %s - reconnect", self.name)
+                    await self.disconnect()
+                    await self._connect_ws()
+                    self.last_ws_receive_ts = ts
+            elif self.ws and self.connected:
+                _LOGGER.info("%s - no game active - close socket", self.name)
+                self.disconnect()
+        self.last_check_ts = ts
 
-    def game_active(self) -> bool:
+    def _game_active(self) -> bool:
         return any(active_cb() > 0 for _, active_cb in list(self._listeners.values()))
 
     def has_listener(self) -> tuple:
