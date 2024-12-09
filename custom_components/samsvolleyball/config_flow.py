@@ -90,7 +90,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = CONFIG_ENTRY_VERSION
 
     cfg_data: dict[str, Any] = {}
-    data = {}
     leagues: dict[str, str] = {}
     teams: dict[str, str] = {}
 

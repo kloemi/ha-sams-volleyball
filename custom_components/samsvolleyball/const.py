@@ -71,7 +71,7 @@ LEAGUE_URL_LOGO_MAP = {
     "vvrp": "https://www.vvrp.de/cms/files/VVRP_Dateien/layout/logos/Logo_VVRP.svg",
 }
 
-TIMEOUT_PERIOD_CHECK = 30  # sec
+TIMEOUT_PERIOD_CHECK = 30  # 30 sec.
 NO_GAME = 0
 NEAR_GAME = 1
 IN_GAME = 2
@@ -93,3 +93,13 @@ STATES_IN = "IN"
 STATES_NOT_FOUND = "NOT_FOUND"
 STATES_PRE = "PRE"
 STATES_POST = "POST"
+
+HEADERS = {
+    "Connection": "Upgrade",
+    "Pragma": "no-cache",
+    "Cache-Control": "no-cache",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+    "Upgrade": "websocket",
+    "Accept-Encoding": "gzip, deflate, br, zstd",
+    "Accept-Language": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7",
+}

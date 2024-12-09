@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import timedelta
 import json
 import logging
 import urllib.parse
@@ -18,7 +19,9 @@ from homeassistant.util import dt as dt_util
 from .const import (
     CONF_HOST,
     CONF_REGION,
+    CONF_TEAM_NAME,
     DOMAIN,
+    HEADERS,
     NO_GAME,
     PLATFORMS,
     TIMEOUT,
@@ -33,8 +36,9 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up sams-volleyball from a config entry."""
     _LOGGER.info(
-        "Sams Volleyball Tracker version %s is starting!",
+        "Sams Volleyball Tracker version %s is starting (%s)!",
         VERSION,
+        entry.data[CONF_TEAM_NAME],
     )
 
     domain_data = hass.data.setdefault(DOMAIN, {})
@@ -59,7 +63,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         coordinator = hass.data[DOMAIN][entry.data[CONF_REGION]]
-        if not coordinator.has_listener():
+        in_use, _ = coordinator.has_listener()
+        if not in_use:
             coordinator = hass.data[DOMAIN].pop(entry.data[CONF_REGION])
             await coordinator.disconnect()
             _LOGGER.info(
@@ -70,15 +75,22 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 class SamsDataCoordinator(DataUpdateCoordinator):
-    """Class to manage fetching sams ticker data. It is instantiated once per used region/websocket."""
+    """Class to manage fetching sams ticker data. It is instantiated once per used region/websocket.
+
+    It receives the data either periodic per GET request or if a game of the attached sensors is active
+    or nearby it connects per websocket to sams.
+    """
 
     def __init__(
-        self, hass: HomeAssistant, session: ClientSession, name, websocket_url, get_url
+        self,
+        hass: HomeAssistant,
+        session: ClientSession,
+        name: str,
+        websocket_url: str,
+        get_url: str,
     ) -> None:
-        """Init websocket instance."""
-        self.hass = hass
+        """Init the data update instance."""
         self.session = session
-        self.name = name
         self.websocket_url = websocket_url
         self.get_url = get_url
         self.ws = None
@@ -88,36 +100,28 @@ class SamsDataCoordinator(DataUpdateCoordinator):
         self.connected = False
         self.loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
         self.receive_timout = TIMEOUT[NO_GAME]
-        self.headers = {
-            "Connection": "Upgrade",
-            "Pragma": "no-cache",
-            "Cache-Control": "no-cache",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
-            "Upgrade": "websocket",
-            "Accept-Encoding": "gzip, deflate, br, zstd",
-            "Accept-Language": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7",
-        }
-        _LOGGER.debug("Init coordinator for %s", self.name)
-        super().__init__(hass, _LOGGER, name=self.name)
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=name,
+            update_interval=timedelta(minutes=2),
+        )
+        _LOGGER.debug("Init coordinator for region %s", self.name)
+
+    async def get_full_data(self) -> dict:
+        """Get the full data json from SAMS by GET request."""
+        resp = await self.session.get(self.get_url, raise_for_status=True)
+        _LOGGER.info("%s received full ticker json", self.name)
+        return await resp.json()
 
     async def _async_update_data(self):
-        now = dt_util.utcnow()
-        ts = dt_util.as_timestamp(now)
-        data = None
-        if (ts - self.last_get_ts) > UPDATE_FULL_INTERVAL:
-            data = await self.get_full_data()
-            self.last_get_ts = ts
+        """Fetch data from API endpoint.
 
-        if await self.game_active():
-            if not self.ws or not self.connected:
-                _LOGGER.debug("Connect to %s", self.websocket_url)
-                await self.connect()
-                self.last_ws_receive_ts = ts
-            if ts - self.last_ws_receive_ts > self.receive_timout:
-                _LOGGER.debug("Timeout on ws %s - reconnect", self.name)
-                await self.disconnect()
-                await self.connect()
-                self.last_ws_receive_ts = ts
+        This is the place to pre-process the data to lookup tables
+        so entities can quickly look up their data.
+        """
+        data = await self.get_full_data()
+        self.last_get_ts = dt_util.as_timestamp(dt_util.utcnow())
         return data
 
     async def _on_close(self):
@@ -143,11 +147,6 @@ class SamsDataCoordinator(DataUpdateCoordinator):
                 "%s - received unexpected message: %s ", self.name, str(message)[1:500]
             )
 
-    async def get_full_data(self) -> dict:
-        resp = await self.session.get(self.get_url, raise_for_status=True)
-        _LOGGER.info("%s received full ticker json", self.name)
-        return await resp.json()
-
     async def _process_messages(self):
         try:
             async for msg in self.ws:
@@ -163,12 +162,12 @@ class SamsDataCoordinator(DataUpdateCoordinator):
                 "Error during processing new message: %s", exc.with_traceback()
             )
 
-    async def connect(self):
+    async def _connect_ws(self):
         try:
             self.ws = await self.session.ws_connect(
                 self.websocket_url,
                 autoclose=False,
-                headers=self.headers,
+                headers=HEADERS,
             )
             self.loop = asyncio.get_event_loop()
             self.ws_task = self.loop.create_task(self._process_messages())
@@ -185,6 +184,19 @@ class SamsDataCoordinator(DataUpdateCoordinator):
         if self.ws is not None:
             await self.ws.close()
             self.ws = None
+
+    async def periodic_work(self):
+        ts = dt_util.as_timestamp(dt_util.utcnow())
+        if self.game_active():
+            if not self.ws or not self.connected:
+                _LOGGER.debug("Connect to %s", self.websocket_url)
+                await self._connect_ws()
+                self.last_ws_receive_ts = ts
+            if ts - self.last_ws_receive_ts > self.receive_timout:
+                _LOGGER.debug("Timeout on ws %s - reconnect", self.name)
+                await self.disconnect()
+                await self._connect_ws()
+                self.last_ws_receive_ts = ts
 
     def game_active(self) -> bool:
         return any(active_cb() > 0 for _, active_cb in list(self._listeners.values()))

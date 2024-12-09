@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 import locale
 import logging
 from typing import Any
@@ -36,7 +35,6 @@ from .const import (
 from .utils import SamsUtils
 
 _LOGGER = logging.getLogger(__name__)
-SCAN_INTERVAL = timedelta(seconds=5)
 
 
 async def async_setup_entry(
@@ -53,7 +51,7 @@ async def async_setup_entry(
     ]
 
     # Add sensor entities.
-    async_add_entities(entities, update_before_add=False)
+    async_add_entities(entities, update_before_add=True)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -99,11 +97,13 @@ class SamsTeamTracker(CoordinatorEntity):
             self._lang = lang or "en_US"
         _, num_listener = self._coordinator.has_listener()
         _LOGGER.debug(
-            "Added entity %s with coordinator %s listener %d",
+            "Added entity %s with coordinator %s - listener #%d",
             self.name,
             self._coordinator.name,
             num_listener,
         )
+        if self._coordinator.data:
+            self._handle_coordinator_update()
 
     def _update_overview(self, data):
         _LOGGER.debug("Update team data for sensor %s", self._name)
@@ -209,7 +209,3 @@ class SamsTeamTracker(CoordinatorEntity):
     def icon(self) -> str:
         """Return the icon to use in the frontend, if any."""
         return DEFAULT_ICON
-
-    @property
-    def should_poll(self) -> bool:
-        return True
