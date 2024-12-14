@@ -23,6 +23,7 @@ from .const import (
     DOMAIN,
     HEADERS,
     IN_GAME,
+    NEAR_GAME,
     NO_GAME,
     PLATFORMS,
     TIMEOUT,
@@ -105,7 +106,6 @@ class SamsDataCoordinator(DataUpdateCoordinator):
         self.last_check_ts = ts_now
         self.connected = False
         self.loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
-        self.receive_timout = TIMEOUT[NO_GAME]
         super().__init__(
             hass,
             _LOGGER,
@@ -204,7 +204,10 @@ class SamsDataCoordinator(DataUpdateCoordinator):
                 if not self.ws or not self.connected:
                     await self._connect_ws()
                     self.last_ws_receive_ts = ts
-                if ts - self.last_ws_receive_ts > self.receive_timout:
+                timeout = (
+                    TIMEOUT[IN_GAME] if self._game_active() else TIMEOUT[NEAR_GAME]
+                )
+                if ts - self.last_ws_receive_ts > timeout:
                     _LOGGER.debug("Timeout on ws %s - reconnect", self.name)
                     await self.disconnect()
                     await self._connect_ws()
