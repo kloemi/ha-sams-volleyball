@@ -22,6 +22,7 @@ from .const import (
     CONF_TEAM_NAME,
     DOMAIN,
     HEADERS,
+    IN_GAME,
     NO_GAME,
     PLATFORMS,
     TIMEOUT,
@@ -30,7 +31,8 @@ from .const import (
     VERSION,
 )
 
-UPDATE_FULL_INTERVAL = 5 * 60  # 5 min.
+UPDATE_FULL_INTERVAL = timedelta(minutes=5)
+UPDATE_INTERVAL_NO_GAME = timedelta(minutes=60)
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -97,6 +99,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
         self.get_url = get_url
         self.ws = None
         self.ws_task = None
+        self._lock = asyncio.Lock()
         self.last_get_ts = dt_util.as_timestamp(dt_util.start_of_local_day())
         self.last_ws_receive_ts = ts_now
         self.last_check_ts = ts_now
@@ -107,7 +110,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=name,
-            update_interval=timedelta(minutes=2),
+            update_interval=timedelta(minutes=5),
         )
         _LOGGER.debug("Init coordinator for region %s", self.name)
 
@@ -163,18 +166,21 @@ class SamsDataCoordinator(DataUpdateCoordinator):
             )
 
     async def _connect_ws(self):
-        try:
-            self.ws = await self.session.ws_connect(
-                self.websocket_url,
-                autoclose=False,
-                headers=HEADERS,
-            )
-            self.loop = asyncio.get_event_loop()
-            self.ws_task = self.loop.create_task(self._process_messages())
-            await self._on_open()
-        except ClientError as exc:  # pylint: disable=broad-except
-            _LOGGER.warning("Error during processing new message: %s", exc)
-            self.disconnect()
+        async with self._lock:
+            if not self.ws or not self.connected:
+                _LOGGER.info("Connect to %s", self.websocket_url)
+                try:
+                    self.ws = await self.session.ws_connect(
+                        self.websocket_url,
+                        autoclose=False,
+                        headers=HEADERS,
+                    )
+                    self.loop = asyncio.get_event_loop()
+                    self.ws_task = self.loop.create_task(self._process_messages())
+                    await self._on_open()
+                except ClientError as exc:  # pylint: disable=broad-except
+                    _LOGGER.warning("Error during processing new message: %s", exc)
+                    self.disconnect()
 
     async def disconnect(self):
         """Close web socket connection."""
@@ -188,9 +194,14 @@ class SamsDataCoordinator(DataUpdateCoordinator):
     async def periodic_work(self, now):
         ts = dt_util.as_timestamp(now)
         if ts - self.last_check_ts > TIMEOUT_PERIOD_CHECK:
-            if self._game_active():
+            if self._game_nearby():
+                if self.update_interval != UPDATE_FULL_INTERVAL:
+                    _LOGGER.debug(
+                        "%s - game nearby - increase update interval to 5 min",
+                        self.name,
+                    )
+                    self.update_interval = UPDATE_FULL_INTERVAL
                 if not self.ws or not self.connected:
-                    _LOGGER.info("Connect to %s", self.websocket_url)
                     await self._connect_ws()
                     self.last_ws_receive_ts = ts
                 if ts - self.last_ws_receive_ts > self.receive_timout:
@@ -198,13 +209,27 @@ class SamsDataCoordinator(DataUpdateCoordinator):
                     await self.disconnect()
                     await self._connect_ws()
                     self.last_ws_receive_ts = ts
-            elif self.ws and self.connected:
-                _LOGGER.info("%s - no game active - close socket", self.name)
-                self.disconnect()
-        self.last_check_ts = ts
+            else:
+                if self.ws and self.connected:
+                    _LOGGER.info("%s - no game active - close socket", self.name)
+                    self.disconnect()
+                if self.update_interval != UPDATE_INTERVAL_NO_GAME:
+                    _LOGGER.debug(
+                        "%s - no game active - reduce update interval to 60 min",
+                        self.name,
+                    )
+                    self.update_interval = UPDATE_INTERVAL_NO_GAME
+            self.last_check_ts = ts
 
     def _game_active(self) -> bool:
-        return any(active_cb() > 0 for _, active_cb in list(self._listeners.values()))
+        return any(
+            active_cb() == IN_GAME for _, active_cb in list(self._listeners.values())
+        )
+
+    def _game_nearby(self) -> bool:
+        return any(
+            active_cb() > NO_GAME for _, active_cb in list(self._listeners.values())
+        )
 
     def has_listener(self) -> tuple:
         return len(self._listeners) > 0, len(self._listeners)
