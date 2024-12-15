@@ -215,7 +215,7 @@ class SamsDataCoordinator(DataUpdateCoordinator):
             else:
                 if self.ws and self.connected:
                     _LOGGER.info("%s - no game active - close socket", self.name)
-                    self.disconnect()
+                    await self.disconnect()
                 if self.update_interval != UPDATE_INTERVAL_NO_GAME:
                     _LOGGER.debug(
                         "%s - no game active - reduce update interval to 60 min",
