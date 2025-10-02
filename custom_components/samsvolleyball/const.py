@@ -22,11 +22,11 @@ CONFIG_ENTRY_VERSION = 1
 
 DEFAULT_OPTIONS = {
     CONF_NAME: "Volleyball Tracker",
-    CONF_HOST: "wss://backend.sams-ticker.de",
+    CONF_HOST: "wss://backend.sams-ticker.de/indoor/",
     CONF_REGION: "baden",
 }
 
-URL_GET = "https://backend.sams-ticker.de/live/tickers/"
+URL_GET = "https://backend.sams-ticker.de/live/indoor/tickers/"
 CONF_REGION_LIST = [
     "baden",
     "bvv",
